@@ -14,8 +14,8 @@
     "categorie": "Topvrouw"
   },
   "teaser": {
-    "start": "00:00:02.75",
-    "duur_seconden": 2.5,
+    "start": "00:00:00.4",
+    "duur_seconden": 3.3,
     "_uitleg": "Kort fragment uit de video waarin je de persoon al ziet, vóór de intro. start = tijdstip in de bronvideo, bijv. \"00:01:12.5\". Laat je hem op null staan, dan stelt Claude Code zelf 3 fragmenten voor en vraagt welke je wilt."
   },
   "intro": {

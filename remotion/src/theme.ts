@@ -50,10 +50,5 @@ export const defaultAssetProps: AssetProps = {
 	logoFc: {w: 1250, h: 880},
 };
 
-// Waar de diamant binnen logo-fc-wit.png staat, als fractie van de logobreedte/-hoogte
-// (middelpunt x/y en breedte). Afstemmen op de echte PNG zodat de diamant uit de
-// openingsanimatie precies op de diamant in het logo landt.
-export const DIAMANT_IN_LOGO = {cx: 0.5, cy: 0.196, w: 0.379};
-
 export const BEELDMERK = 'beeldmerk-goud.png';
 export const LOGO_FC = 'logo-fc-wit.png';
