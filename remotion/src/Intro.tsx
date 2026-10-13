@@ -5,11 +5,11 @@ import {introLogoBox, useLayout, type Box} from './layout';
 import {BEELDMERK, C, FONT, LOGO_FC, config, progress, type AssetProps} from './theme';
 
 // De diamant ("ster") zweeft rustig schuin door beeld en fadet voorbij;
-// precies als hij langs het logo komt, verschijnt het logo.
+// zodra hij voorbij is, verschijnt het logo.
 const PASS_START = 0.2;
 const PASS_DUR = 2.4;
-const TRAIL = 6; // naglans: kopieën van de PNG met afnemende opacity
-const TRAIL_STEP = 0.06; // s tussen de kopieën
+const TRAIL = 12; // naglans: kopieën van de PNG met afnemende opacity
+const TRAIL_STEP = 0.025; // s tussen de kopieën
 
 export const Intro: React.FC<AssetProps> = (assets) => {
 	const frame = useCurrentFrame();
@@ -22,9 +22,10 @@ export const Intro: React.FC<AssetProps> = (assets) => {
 	const bm = assets.beeldmerk ?? {w: 1, h: 1};
 	const baseW = 0.2 * Math.min(width, height);
 
-	// Baan: van linksonder, door het midden van het logo, naar rechtsboven.
-	const from = {x: -0.15 * width, y: logo.cy + 0.3 * height};
-	const to = {x: 1.15 * width, y: logo.cy - 0.3 * height};
+	// Baan: van linksonder naar rechtsboven, halverwege over de plek van de diamant in het logo.
+	const midY = logo.cy - logo.h * 0.3;
+	const from = {x: -0.15 * width, y: midY + 0.3 * height};
+	const to = {x: 1.15 * width, y: midY - 0.3 * height};
 	const starAt = (time: number) => {
 		// Lineair door beeld: zweven, niet versnellen of stuiteren.
 		const p = (time - PASS_START) / PASS_DUR;
@@ -44,8 +45,8 @@ export const Intro: React.FC<AssetProps> = (assets) => {
 	const star = starAt(t);
 	const sheen = interpolate(star.p, [0.35, 0.65], [0, 1], {extrapolateLeft: 'clamp', extrapolateRight: 'clamp'});
 
-	// Logo komt op terwijl de ster er langs strijkt.
-	const logoIn = progress(frame, fps, PASS_START + PASS_DUR * 0.4, 1.0);
+	// Logo komt op zodra de ster er net voorbij is.
+	const logoIn = progress(frame, fps, PASS_START + PASS_DUR * 0.56, 0.9);
 	const logoBox: Box = {...logo, w: logo.w * (0.96 + 0.04 * logoIn), h: logo.h * (0.96 + 0.04 * logoIn)};
 
 	const eyebrowP = progress(frame, fps, 2.4, 0.6);
@@ -70,7 +71,7 @@ export const Intro: React.FC<AssetProps> = (assets) => {
 								style={{
 									...boxStyle({...s.box, w, h: (w * bm.h) / bm.w}),
 									objectFit: 'contain',
-									opacity: s.opacity * 0.22 * fall,
+									opacity: s.opacity * 0.12 * fall,
 								}}
 							/>
 						);

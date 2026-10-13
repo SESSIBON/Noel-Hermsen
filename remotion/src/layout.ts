@@ -39,14 +39,14 @@ export const introLogoBox = (L: Layout, assets: AssetProps): Box => {
 export const outroNameBottom = (L: Layout) => L.height * (L.portrait ? 0.46 : 0.5);
 
 export const outroLogoBox = (L: Layout, assets: AssetProps): Box => {
-	const {w, h} = fitLogo(L, assets, 170 * L.u);
+	const {w, h} = fitLogo(L, assets, 230 * L.u);
 	const top = outroNameBottom(L) + 72 * L.u;
 	return {cx: L.width / 2, cy: top + h / 2, w, h};
 };
 
 // Logo onderaan in de CTA. Met socials schuift het logo iets naar links, de socials staan rechts ervan.
 export const ctaLogoBox = (L: Layout, assets: AssetProps): Box => {
-	const {w, h} = fitLogo(L, assets, 140 * L.u);
+	const {w, h} = fitLogo(L, assets, 190 * L.u);
 	const cy = L.height - L.safe.bottom - h / 2;
 	const cx = config.cta.socials ? L.width / 2 - L.width * 0.16 : L.width / 2;
 	return {cx, cy, w, h};
