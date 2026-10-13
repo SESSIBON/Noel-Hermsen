@@ -1,0 +1,163 @@
+#!/usr/bin/env bash
+# Topvrouwen Limburg: teaser -> intro -> volledige video -> outro -> CTA.
+# Gebruik:  ./build.sh            (alles, van begin tot eind)
+#           ./build.sh --preview  (rendert ook als logo-PNG's ontbreken; alleen om de opmaak te bekijken)
+set -euo pipefail
+cd "$(dirname "$0")"
+
+PREVIEW=0
+[[ "${1:-}" == "--preview" ]] && PREVIEW=1
+
+need() { command -v "$1" >/dev/null || { echo "Ontbreekt: $1 (macOS: brew install ffmpeg node)"; exit 1; }; }
+need ffmpeg; need ffprobe; need node
+node -e 'process.exit(+process.versions.node.split(".")[0] < 18 ? 1 : 0)' || { echo "Node.js 18+ nodig"; exit 1; }
+
+cfg() { node -e "const c=require('./config.json');const v=$1;process.stdout.write(v===null||v===undefined?'':String(v))"; }
+
+# --- Stap 0: config controleren --------------------------------------------------
+if node -e '
+  const c=require("./config.json");
+  const bad=[];
+  (function walk(o,p){for(const[k,v]of Object.entries(o)){if(k.startsWith("_"))continue;
+    if(typeof v==="string"&&/\[[^\]]+\]/.test(v))bad.push(p+k+": "+v);
+    else if(v&&typeof v==="object")walk(v,p+k+".");}})(c,"");
+  if(bad.length){console.log("Nog in te vullen in config.json:\n  "+bad.join("\n  "));process.exit(1)}'; then :; else exit 1; fi
+
+SRC=$(cfg c.bronvideo)
+OUT=$(cfg c.output)
+[[ -f "$SRC" ]] || { echo "Bronvideo niet gevonden: $SRC"; exit 1; }
+
+TEASER_START=$(cfg c.teaser.start)
+[[ -n "$TEASER_START" ]] || { echo "teaser.start staat op null: kies eerst een teaserfragment."; exit 1; }
+TEASER_DUR=$(cfg c.teaser.duur_seconden)
+INTRO_DUR=$(cfg c.intro.duur_seconden)
+OUTRO_DUR=$(cfg c.outro.duur_seconden)
+CTA_DUR=$(cfg c.cta.duur_seconden)
+MUZIEK=$(cfg c.audio.muziek_intro_outro)
+RES=$(cfg c.resolutie)
+
+# --- Bron meten -------------------------------------------------------------------
+probe() { ffprobe -v error -select_streams "$1" -show_entries "stream=$2" -of default=nw=1:nk=1 "$SRC" | head -1; }
+SRC_W=$(probe v:0 width); SRC_H=$(probe v:0 height)
+FPS_RAW=$(probe v:0 r_frame_rate)
+FPS=$(node -e "const[a,b]='$FPS_RAW'.split('/').map(Number);process.stdout.write(String(Math.round(a/(b||1)*1000)/1000))")
+SRC_RANGE=$(probe v:0 color_range)
+HAS_AUDIO=$([[ -n "$(probe a:0 codec_type)" ]] && echo 1 || echo 0)
+if [[ -n "$RES" ]]; then W=${RES%x*}; H=${RES#*x}; else W=$SRC_W; H=$SRC_H; fi
+echo "Bron: ${SRC_W}x${SRC_H} @ ${FPS} fps, audio: $HAS_AUDIO, range: ${SRC_RANGE:-tv}  ->  render ${W}x${H}"
+
+# Seconden <-> frames (alles op hele frames, zodat beeld en geluid niet uit elkaar lopen).
+fr() { node -e "process.stdout.write(String(Math.round($1*$FPS)))"; }
+sec() { node -e "process.stdout.write(String($1/$FPS))"; }
+tosec() { node -e "const s='$1';process.stdout.write(String(s.includes(':')?s.split(':').reduce((a,x)=>a*60+Number(x),0):Number(s)))"; }
+
+BUILD=build
+mkdir -p "$BUILD" "$(dirname "$OUT")"
+
+# --- Assets naar Remotion ---------------------------------------------------------
+mkdir -p remotion/public
+cp -f assets/*.png remotion/public/ 2>/dev/null || true
+imginfo() {
+  local f="assets/$1"
+  if [[ -f "$f" ]]; then
+    ffprobe -v error -show_entries stream=width,height -of csv=p=0:s=x "$f" | head -1 | awk -Fx '{printf "{\"w\":%s,\"h\":%s}", $1, $2}'
+  else
+    echo null
+  fi
+}
+BM=$(imginfo beeldmerk-goud.png); LOGO=$(imginfo logo-fc-wit.png)
+if [[ "$BM" == null || "$LOGO" == null ]]; then
+  if [[ $PREVIEW == 1 ]]; then
+    echo "LET OP: logo-PNG's ontbreken in assets/; preview zonder logo."
+  else
+    echo "Ontbreekt in assets/: beeldmerk-goud.png en/of logo-fc-wit.png"; exit 1
+  fi
+fi
+PROPS="{\"beeldmerk\":$BM,\"logoFc\":$LOGO,\"fps\":$FPS}"
+
+# --- Stap 1: Remotion --------------------------------------------------------------
+(
+  cd remotion
+  [[ -d node_modules ]] || npm install --no-audit --no-fund
+  BROWSER=()
+  for b in /opt/pw-browsers/chromium_headless_shell-*/chrome-linux/headless_shell; do
+    [[ -x "$b" ]] && BROWSER=(--browser-executable="$b") && break
+  done
+  for comp in Intro Outro Cta; do
+    lc=$(echo "$comp" | tr '[:upper:]' '[:lower:]')
+    npx remotion render src/index.ts "$comp" "../$BUILD/$lc.mp4" --codec=h264 \
+      --props="$PROPS" --log=error "${BROWSER[@]}"
+  done
+)
+
+# --- Stap 2: ffmpeg ------------------------------------------------------------------
+VENC=(-c:v libx264 -preset medium -crf 18 -pix_fmt yuv420p -r "$FPS"
+      -color_primaries bt709 -color_trc bt709 -colorspace bt709 -color_range tv)
+AENC=(-c:a aac -b:a 192k -ar 48000 -ac 2)
+SCALE="scale=${W}:${H}:force_original_aspect_ratio=decrease:flags=lanczos:in_range=${SRC_RANGE:-tv}:out_range=tv,pad=${W}:${H}:(ow-iw)/2:(oh-ih)/2:color=0x05001e,setsar=1"
+
+# Teaser: opnieuw encoderen (exact beginframe), heel licht inzoomen 1 -> 1,03, audio 0,4 s fade-out.
+T_START=$(tosec "$TEASER_START")
+T_FR=$(fr "$TEASER_DUR"); T_DUR=$(sec "$T_FR")
+ZOOM="scale=w='trunc(${W}*(1+0.03*t/${T_DUR})/2)*2':h=-2:eval=frame:flags=lanczos,crop=${W}:${H}"
+if [[ $HAS_AUDIO == 1 ]]; then TA=(-map 0:a:0); TAF="atrim=0:${T_DUR},afade=t=out:st=$(node -e "process.stdout.write(String($T_DUR-0.4))"):d=0.4"
+else TA=(-map 1:a); TAF="atrim=0:${T_DUR}"; fi
+ffmpeg -v error -y -ss "$T_START" -i "$SRC" -f lavfi -i anullsrc=r=48000:cl=stereo \
+  -t "$T_DUR" -map 0:v:0 "${TA[@]}" -vf "fps=${FPS},${SCALE},${ZOOM},trim=end_frame=${T_FR}" -af "$TAF" \
+  -frames:v "$T_FR" "${VENC[@]}" "${AENC[@]}" "$BUILD/n_teaser.mp4"
+
+# Hoofdvideo: volledig. Is het geluid langer dan het beeld, dan wordt het laatste frame
+# vastgehouden (geluid wordt nooit afgekapt); daarna alles op hele frames.
+V_DUR=$(ffprobe -v error -select_streams v:0 -show_entries stream=duration -of default=nw=1:nk=1 "$SRC")
+A_DUR=$([[ $HAS_AUDIO == 1 ]] && ffprobe -v error -select_streams a:0 -show_entries stream=duration -of default=nw=1:nk=1 "$SRC" || echo 0)
+M_FR=$(node -e "process.stdout.write(String(Math.ceil(Math.max($V_DUR,$A_DUR)*$FPS-1e-6)))")
+M_DUR=$(sec "$M_FR")
+if [[ $HAS_AUDIO == 1 ]]; then MA=(-map 0:a:0); else MA=(-map 1:a); fi
+ffmpeg -v error -y -i "$SRC" -f lavfi -i anullsrc=r=48000:cl=stereo \
+  -map 0:v:0 "${MA[@]}" \
+  -vf "fps=${FPS},${SCALE},tpad=stop_mode=clone:stop_duration=5,trim=end_frame=${M_FR}" \
+  -af "aresample=48000,apad,atrim=0:${M_DUR}" \
+  -frames:v "$M_FR" "${VENC[@]}" "${AENC[@]}" "$BUILD/n_video.mp4"
+
+# Intro, outro, CTA: stilte of muziek (fade in/uit 0,8 s).
+for part in intro outro cta; do
+  case $part in intro) D=$INTRO_DUR;; outro) D=$OUTRO_DUR;; cta) D=$CTA_DUR;; esac
+  P_FR=$(fr "$D"); P_DUR=$(sec "$P_FR")
+  if [[ -n "$MUZIEK" ]]; then
+    AIN=(-stream_loop -1 -i "$MUZIEK")
+    AF="atrim=0:${P_DUR},afade=t=in:d=0.8,afade=t=out:st=$(node -e "process.stdout.write(String($P_DUR-0.8))"):d=0.8"
+  else
+    AIN=(-f lavfi -i anullsrc=r=48000:cl=stereo)
+    AF="atrim=0:${P_DUR}"
+  fi
+  ffmpeg -v error -y -i "$BUILD/$part.mp4" "${AIN[@]}" -map 0:v:0 -map 1:a:0 \
+    -vf "fps=${FPS},scale=${W}:${H}:flags=lanczos,setsar=1,trim=end_frame=${P_FR}" -af "$AF" \
+    -frames:v "$P_FR" "${VENC[@]}" "${AENC[@]}" "$BUILD/n_$part.mp4"
+done
+
+# Samenvoegen. Overgangen op hele frames; audio telkens mee met acrossfade van dezelfde duur.
+X1=$(sec "$(fr 0.5)"); X2=$(sec "$(fr 0.6)"); X3=$(sec "$(fr 0.8)")
+TD=$(sec "$T_FR"); ID=$(sec "$(fr "$INTRO_DUR")"); OD=$(sec "$(fr "$OUTRO_DUR")"); CD=$(sec "$(fr "$CTA_DUR")")
+off() { node -e "process.stdout.write(String(Math.round(($1)*1e6)/1e6))"; }
+O1=$(off "$TD-$X1")
+O2=$(off "$TD+$ID-$X1-$X2")
+O3=$(off "$TD+$ID+$M_DUR-$X1-$X2-$X3")
+EXPECT=$(off "$TD+$ID+$M_DUR+$OD+$CD-$X1-$X2-$X3")
+
+ffmpeg -v error -y \
+  -i "$BUILD/n_teaser.mp4" -i "$BUILD/n_intro.mp4" -i "$BUILD/n_video.mp4" \
+  -i "$BUILD/n_outro.mp4" -i "$BUILD/n_cta.mp4" \
+  -filter_complex "
+    [0:v][1:v]xfade=transition=fadeblack:duration=${X1}:offset=${O1}[v01];
+    [v01][2:v]xfade=transition=fade:duration=${X2}:offset=${O2}[v02];
+    [v02][3:v]xfade=transition=fadeblack:duration=${X3}:offset=${O3}[v03];
+    [v03][4:v]concat=n=2:v=1:a=0,format=yuv420p[v];
+    [0:a][1:a]acrossfade=d=${X1}:c1=tri:c2=tri[a01];
+    [a01][2:a]acrossfade=d=${X2}:c1=tri:c2=tri[a02];
+    [a02][3:a]acrossfade=d=${X3}:c1=tri:c2=tri[a03];
+    [a03][4:a]concat=n=2:v=0:a=1,apad,atrim=0:${EXPECT}[a]" \
+  -map "[v]" -map "[a]" "${VENC[@]}" "${AENC[@]}" -movflags +faststart "$OUT"
+
+echo "Klaar: $OUT"
+echo "Verwachte duur: ${EXPECT}s"
+ffprobe -v error -show_entries stream=codec_type,duration -of compact=p=0 "$OUT"

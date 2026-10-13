@@ -1,0 +1,4 @@
+node_modules
+out
+# logo's worden door build.sh uit ../assets gekopieerd
+public/*.png

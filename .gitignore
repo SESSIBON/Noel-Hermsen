@@ -1,0 +1,8 @@
+# Video's horen niet in git
+input/*
+!input/.gitkeep
+output/*
+!output/.gitkeep
+build/
+node_modules/
+.DS_Store

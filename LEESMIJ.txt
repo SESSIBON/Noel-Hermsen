@@ -1,0 +1,13 @@
+TOPVROUWEN LIMBURG — VIDEO KIT (intro + outro + call to action)
+
+1. Pak deze map uit, bijvoorbeeld in Documenten/topvrouwen-video-kit
+2. Zet de voorstelvideo in de map "input" en noem hem: voorstelvideo.mp4
+3. Open config.json en vul alles tussen [HAKEN] in
+   (naam van de persoon, teksten voor intro en outro, datum/locatie en ticket-URL voor de call to action)
+4. Open een terminal in deze map en start Claude Code:   claude
+5. Typ:   Maak de video volgens CLAUDE.md
+
+Claude Code leest CLAUDE.md automatisch en maakt: teaser > intro > video > outro > call to action.
+Laat je teaser.start leeg, dan stelt Claude Code zelf 3 fragmenten voor. Resultaat komt in de map "output".
+
+Teksten later aanpassen? Wijzig config.json en vraag Claude Code: "render opnieuw".
