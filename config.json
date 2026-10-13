@@ -20,7 +20,7 @@
     "_uitleg": "Kort fragment uit de video waarin je de persoon al ziet, vóór de intro. start = tijdstip in de bronvideo, bijv. \"00:01:12.5\". Laat je hem op null staan, dan stelt Claude Code zelf 3 fragmenten voor en vraagt welke je wilt."
   },
   "foto": {
-    "tijdstip": "00:00:07.04",
+    "tijdstip": "00:00:00.32",
     "duur_seconden": 2.2,
     "naam_tonen": true,
     "_uitleg": "Stilstaand beeld uit de video als opening. tijdstip = moment in de bronvideo. naam_tonen: de naam wordt ingetypt en fadet weer uit."
