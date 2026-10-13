@@ -1,7 +1,8 @@
 {
   "_uitleg": "Vul hier de teksten in. Alles tussen [HAKEN] moet nog ingevuld worden. Claude Code stopt en vraagt ernaar als er nog haken in staan.",
-  "_uitleg_volgorde": "Zet \"teaser\" vooraan in de lijst om weer met een kort fragment uit de video te openen.",
+  "_uitleg_volgorde": "Begin van de lijst: \"foto\" (stilstaand beeld uit de video), \"teaser\" (kort fragment) of geen van beide.",
   "volgorde": [
+    "foto",
     "intro",
     "video",
     "outro",
@@ -17,6 +18,12 @@
     "start": "00:00:00.4",
     "duur_seconden": 3.3,
     "_uitleg": "Kort fragment uit de video waarin je de persoon al ziet, vóór de intro. start = tijdstip in de bronvideo, bijv. \"00:01:12.5\". Laat je hem op null staan, dan stelt Claude Code zelf 3 fragmenten voor en vraagt welke je wilt."
+  },
+  "foto": {
+    "tijdstip": "00:00:07.04",
+    "duur_seconden": 2.2,
+    "naam_tonen": true,
+    "_uitleg": "Stilstaand beeld uit de video als opening. tijdstip = moment in de bronvideo. naam_tonen: de naam wordt ingetypt en fadet weer uit."
   },
   "intro": {
     "duur_seconden": 6.5,

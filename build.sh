@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Topvrouwen Limburg: (teaser ->) intro -> volledige video -> outro -> CTA. Volgorde: zie config.json.
+# Topvrouwen Limburg: (teaser of foto ->) intro -> volledige video -> outro -> CTA. Volgorde: zie config.json.
 # Gebruik:  ./build.sh            (alles, van begin tot eind)
 #           ./build.sh --preview  (rendert ook als logo-PNG's ontbreken; alleen om de opmaak te bekijken)
 set -euo pipefail
@@ -33,6 +33,11 @@ if [[ $USE_TEASER == 1 && -z "$TEASER_START" ]]; then
   echo "teaser.start staat op null: kies eerst een teaserfragment."; exit 1
 fi
 TEASER_DUR=$(cfg c.teaser.duur_seconden)
+# Foto-opening: stilstaand beeld uit de video, eventueel met de naam die wordt ingetypt.
+USE_FOTO=$(cfg "c.volgorde.includes('foto')?1:0")
+[[ $USE_FOTO == 1 ]] && USE_TEASER=0
+FOTO_T=$(cfg "c.foto&&c.foto.tijdstip")
+FOTO_DUR=$(cfg "c.foto&&c.foto.duur_seconden")
 INTRO_DUR=$(cfg c.intro.duur_seconden)
 OUTRO_DUR=$(cfg c.outro.duur_seconden)
 CTA_DUR=$(cfg c.cta.duur_seconden)
@@ -77,6 +82,15 @@ if [[ "$BM" == null || "$LOGO" == null ]]; then
   fi
 fi
 PROPS="{\"beeldmerk\":$BM,\"logoFc\":$LOGO,\"fps\":$FPS}"
+COMPS=(Intro Outro Cta)
+if [[ $USE_FOTO == 1 ]]; then
+  [[ -n "$FOTO_T" ]] || { echo "foto.tijdstip ontbreekt in config.json"; exit 1; }
+  # "Screenshot" uit de bronvideo, beeldvullend op de eindmaat.
+  ffmpeg -v error -y -ss "$(tosec "$FOTO_T")" -i "$SRC" -frames:v 1 \
+    -vf "scale=${W}:${H}:force_original_aspect_ratio=increase:flags=lanczos:in_range=${SRC_RANGE:-tv},crop=${W}:${H}" \
+    remotion/public/foto.png
+  COMPS=(Foto "${COMPS[@]}")
+fi
 
 # --- Stap 1: Remotion --------------------------------------------------------------
 (
@@ -86,7 +100,7 @@ PROPS="{\"beeldmerk\":$BM,\"logoFc\":$LOGO,\"fps\":$FPS}"
   for b in /opt/pw-browsers/chromium_headless_shell-*/chrome-linux/headless_shell; do
     [[ -x "$b" ]] && BROWSER=(--browser-executable="$b") && break
   done
-  for comp in Intro Outro Cta; do
+  for comp in "${COMPS[@]}"; do
     lc=$(echo "$comp" | tr '[:upper:]' '[:lower:]')
     npx remotion render src/index.ts "$comp" "../$BUILD/$lc.mp4" --codec=h264 \
       --props="$PROPS" --log=error "${BROWSER[@]}"
@@ -141,8 +155,9 @@ ffmpeg -v error -y -i "$SRC" -f lavfi -i anullsrc=r=48000:cl=stereo "${WM_IN[@]}
   -frames:v "$M_FR" "${VENC[@]}" "${AENC[@]}" "$BUILD/n_video.mp4"
 
 # Intro, outro, CTA: stilte of muziek (fade in/uit 0,8 s).
-for part in intro outro cta; do
-  case $part in intro) D=$INTRO_DUR;; outro) D=$OUTRO_DUR;; cta) D=$CTA_DUR;; esac
+PARTS=(intro outro cta); [[ $USE_FOTO == 1 ]] && PARTS=(foto "${PARTS[@]}")
+for part in "${PARTS[@]}"; do
+  case $part in foto) D=$FOTO_DUR;; intro) D=$INTRO_DUR;; outro) D=$OUTRO_DUR;; cta) D=$CTA_DUR;; esac
   P_FR=$(fr "$D"); P_DUR=$(sec "$P_FR")
   if [[ -n "$MUZIEK" ]]; then
     AIN=(-stream_loop -1 -i "$MUZIEK")
@@ -157,17 +172,18 @@ for part in intro outro cta; do
 done
 
 # Samenvoegen. Overgangen op hele frames; audio telkens mee met acrossfade van dezelfde duur.
-#   teaser -> intro: fadeblack 0,5 s | intro -> video: fade 0,6 s | video -> outro: fadeblack 0,8 s
+#   teaser -> intro: fadeblack 0,5 s | foto -> intro: fade 0,5 s | intro -> video: fade 0,6 s | video -> outro: fadeblack 0,8 s
 #   outro -> CTA: gewone concat (de achtergrond loopt in Remotion door).
 X1=$(sec "$(fr 0.5)"); X2=$(sec "$(fr 0.6)"); X3=$(sec "$(fr 0.8)")
 ID=$(sec "$(fr "$INTRO_DUR")"); OD=$(sec "$(fr "$OUTRO_DUR")"); CD=$(sec "$(fr "$CTA_DUR")")
 off() { node -e "process.stdout.write(String(Math.round(($1)*1e6)/1e6))"; }
 
 INPUTS=(); VF=""; AF=""
-if [[ $USE_TEASER == 1 ]]; then
-  TD=$(sec "$T_FR")
-  INPUTS+=(-i "$BUILD/n_teaser.mp4" -i "$BUILD/n_intro.mp4")
-  VF+="[0:v][1:v]xfade=transition=fadeblack:duration=${X1}:offset=$(off "$TD-$X1")[vi];"
+if [[ $USE_TEASER == 1 || $USE_FOTO == 1 ]]; then
+  if [[ $USE_FOTO == 1 ]]; then OPEN=foto; TD=$(sec "$(fr "$FOTO_DUR")"); TR=fade
+  else OPEN=teaser; TD=$(sec "$T_FR"); TR=fadeblack; fi
+  INPUTS+=(-i "$BUILD/n_$OPEN.mp4" -i "$BUILD/n_intro.mp4")
+  VF+="[0:v][1:v]xfade=transition=${TR}:duration=${X1}:offset=$(off "$TD-$X1")[vi];"
   AF+="[0:a][1:a]acrossfade=d=${X1}:c1=tri:c2=tri[ai];"
   HEAD=$(off "$TD+$ID-$X1"); N=2
 else
