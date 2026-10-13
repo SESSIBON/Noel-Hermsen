@@ -1,7 +1,7 @@
 {
   "_uitleg": "Vul hier de teksten in. Alles tussen [HAKEN] moet nog ingevuld worden. Claude Code stopt en vraagt ernaar als er nog haken in staan.",
+  "_uitleg_volgorde": "Zet \"teaser\" vooraan in de lijst om weer met een kort fragment uit de video te openen.",
   "volgorde": [
-    "teaser",
     "intro",
     "video",
     "outro",
@@ -19,7 +19,7 @@
     "_uitleg": "Kort fragment uit de video waarin je de persoon al ziet, vóór de intro. start = tijdstip in de bronvideo, bijv. \"00:01:12.5\". Laat je hem op null staan, dan stelt Claude Code zelf 3 fragmenten voor en vraagt welke je wilt."
   },
   "intro": {
-    "duur_seconden": 5,
+    "duur_seconden": 6.5,
     "eyebrow": "Verkiezing 2026",
     "titel": "Finalist Topvrouwen Limburg"
   },

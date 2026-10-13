@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Topvrouwen Limburg: teaser -> intro -> volledige video -> outro -> CTA.
+# Topvrouwen Limburg: (teaser ->) intro -> volledige video -> outro -> CTA. Volgorde: zie config.json.
 # Gebruik:  ./build.sh            (alles, van begin tot eind)
 #           ./build.sh --preview  (rendert ook als logo-PNG's ontbreken; alleen om de opmaak te bekijken)
 set -euo pipefail
@@ -27,8 +27,11 @@ SRC=$(cfg c.bronvideo)
 OUT=$(cfg c.output)
 [[ -f "$SRC" ]] || { echo "Bronvideo niet gevonden: $SRC"; exit 1; }
 
+USE_TEASER=$(cfg "c.volgorde.includes('teaser')?1:0")
 TEASER_START=$(cfg c.teaser.start)
-[[ -n "$TEASER_START" ]] || { echo "teaser.start staat op null: kies eerst een teaserfragment."; exit 1; }
+if [[ $USE_TEASER == 1 && -z "$TEASER_START" ]]; then
+  echo "teaser.start staat op null: kies eerst een teaserfragment."; exit 1
+fi
 TEASER_DUR=$(cfg c.teaser.duur_seconden)
 INTRO_DUR=$(cfg c.intro.duur_seconden)
 OUTRO_DUR=$(cfg c.outro.duur_seconden)
@@ -96,6 +99,7 @@ VENC=(-c:v libx264 -preset medium -crf 18 -pix_fmt yuv420p -r "$FPS"
 AENC=(-c:a aac -b:a 192k -ar 48000 -ac 2)
 SCALE="scale=${W}:${H}:force_original_aspect_ratio=decrease:flags=lanczos:in_range=${SRC_RANGE:-tv}:out_range=tv,pad=${W}:${H}:(ow-iw)/2:(oh-ih)/2:color=0x05001e,setsar=1"
 
+if [[ $USE_TEASER == 1 ]]; then
 # Teaser: opnieuw encoderen (exact beginframe), heel licht inzoomen 1 -> 1,03, audio 0,4 s fade-out.
 T_START=$(tosec "$TEASER_START")
 T_FR=$(fr "$TEASER_DUR"); T_DUR=$(sec "$T_FR")
@@ -105,6 +109,7 @@ else TA=(-map 1:a); TAF="atrim=0:${T_DUR}"; fi
 ffmpeg -v error -y -ss "$T_START" -i "$SRC" -f lavfi -i anullsrc=r=48000:cl=stereo \
   -t "$T_DUR" -map 0:v:0 "${TA[@]}" -vf "fps=${FPS},${SCALE},${ZOOM},trim=end_frame=${T_FR}" -af "$TAF" \
   -frames:v "$T_FR" "${VENC[@]}" "${AENC[@]}" "$BUILD/n_teaser.mp4"
+fi
 
 # Hoofdvideo: volledig. Is het geluid langer dan het beeld, dan wordt het laatste frame
 # vastgehouden (geluid wordt nooit afgekapt); daarna alles op hele frames.
@@ -136,26 +141,36 @@ for part in intro outro cta; do
 done
 
 # Samenvoegen. Overgangen op hele frames; audio telkens mee met acrossfade van dezelfde duur.
+#   teaser -> intro: fadeblack 0,5 s | intro -> video: fade 0,6 s | video -> outro: fadeblack 0,8 s
+#   outro -> CTA: gewone concat (de achtergrond loopt in Remotion door).
 X1=$(sec "$(fr 0.5)"); X2=$(sec "$(fr 0.6)"); X3=$(sec "$(fr 0.8)")
-TD=$(sec "$T_FR"); ID=$(sec "$(fr "$INTRO_DUR")"); OD=$(sec "$(fr "$OUTRO_DUR")"); CD=$(sec "$(fr "$CTA_DUR")")
+ID=$(sec "$(fr "$INTRO_DUR")"); OD=$(sec "$(fr "$OUTRO_DUR")"); CD=$(sec "$(fr "$CTA_DUR")")
 off() { node -e "process.stdout.write(String(Math.round(($1)*1e6)/1e6))"; }
-O1=$(off "$TD-$X1")
-O2=$(off "$TD+$ID-$X1-$X2")
-O3=$(off "$TD+$ID+$M_DUR-$X1-$X2-$X3")
-EXPECT=$(off "$TD+$ID+$M_DUR+$OD+$CD-$X1-$X2-$X3")
 
-ffmpeg -v error -y \
-  -i "$BUILD/n_teaser.mp4" -i "$BUILD/n_intro.mp4" -i "$BUILD/n_video.mp4" \
-  -i "$BUILD/n_outro.mp4" -i "$BUILD/n_cta.mp4" \
-  -filter_complex "
-    [0:v][1:v]xfade=transition=fadeblack:duration=${X1}:offset=${O1}[v01];
-    [v01][2:v]xfade=transition=fade:duration=${X2}:offset=${O2}[v02];
-    [v02][3:v]xfade=transition=fadeblack:duration=${X3}:offset=${O3}[v03];
-    [v03][4:v]concat=n=2:v=1:a=0,format=yuv420p[v];
-    [0:a][1:a]acrossfade=d=${X1}:c1=tri:c2=tri[a01];
-    [a01][2:a]acrossfade=d=${X2}:c1=tri:c2=tri[a02];
-    [a02][3:a]acrossfade=d=${X3}:c1=tri:c2=tri[a03];
-    [a03][4:a]concat=n=2:v=0:a=1,apad,atrim=0:${EXPECT}[a]" \
+INPUTS=(); VF=""; AF=""
+if [[ $USE_TEASER == 1 ]]; then
+  TD=$(sec "$T_FR")
+  INPUTS+=(-i "$BUILD/n_teaser.mp4" -i "$BUILD/n_intro.mp4")
+  VF+="[0:v][1:v]xfade=transition=fadeblack:duration=${X1}:offset=$(off "$TD-$X1")[vi];"
+  AF+="[0:a][1:a]acrossfade=d=${X1}:c1=tri:c2=tri[ai];"
+  HEAD=$(off "$TD+$ID-$X1"); N=2
+else
+  INPUTS+=(-i "$BUILD/n_intro.mp4")
+  VF+="[0:v]null[vi];"; AF+="[0:a]anull[ai];"
+  HEAD=$ID; N=1
+fi
+INPUTS+=(-i "$BUILD/n_video.mp4" -i "$BUILD/n_outro.mp4" -i "$BUILD/n_cta.mp4")
+O2=$(off "$HEAD-$X2")
+O3=$(off "$HEAD+$M_DUR-$X2-$X3")
+EXPECT=$(off "$HEAD+$M_DUR+$OD+$CD-$X2-$X3")
+VF+="[vi][$N:v]xfade=transition=fade:duration=${X2}:offset=${O2}[v2];"
+VF+="[v2][$((N+1)):v]xfade=transition=fadeblack:duration=${X3}:offset=${O3}[v3];"
+VF+="[v3][$((N+2)):v]concat=n=2:v=1:a=0,format=yuv420p[v];"
+AF+="[ai][$N:a]acrossfade=d=${X2}:c1=tri:c2=tri[a2];"
+AF+="[a2][$((N+1)):a]acrossfade=d=${X3}:c1=tri:c2=tri[a3];"
+AF+="[a3][$((N+2)):a]concat=n=2:v=0:a=1,apad,atrim=0:${EXPECT}[a]"
+
+ffmpeg -v error -y "${INPUTS[@]}" -filter_complex "${VF}${AF}" \
   -map "[v]" -map "[a]" "${VENC[@]}" "${AENC[@]}" -movflags +faststart "$OUT"
 
 echo "Klaar: $OUT"
