@@ -38,6 +38,13 @@
     "_uitleg_url": "url = de echte ticketlink. url_weergave = wat in beeld staat (een lange link is in een video niet leesbaar). Heb je een korte link, zet die dan in url_weergave.",
     "socials": "@topvrouwenlimburg"
   },
+  "watermerk": {
+    "logo": "assets/logo-fc-wit.png",
+    "positie": "linksboven",
+    "breedte_procent": 16,
+    "zichtbaarheid": 0.7,
+    "_uitleg": "Klein logo over de voorstelvideo. positie: linksboven, rechtsboven, linksonder of rechtsonder. breedte_procent = % van de beeldbreedte, zichtbaarheid 0..1. Zet logo op null om het uit te zetten."
+  },
   "audio": {
     "muziek_intro_outro": null,
     "_uitleg_muziek": "Optioneel: pad naar een rechtenvrij muziekbestand, bijv. 'input/muziek.mp3'. Wordt gebruikt onder intro, outro en CTA. null = stilte. Het geluid van de bronvideo blijft altijd onaangetast."

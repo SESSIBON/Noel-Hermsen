@@ -118,9 +118,25 @@ A_DUR=$([[ $HAS_AUDIO == 1 ]] && ffprobe -v error -select_streams a:0 -show_entr
 M_FR=$(node -e "process.stdout.write(String(Math.ceil(Math.max($V_DUR,$A_DUR)*$FPS-1e-6)))")
 M_DUR=$(sec "$M_FR")
 if [[ $HAS_AUDIO == 1 ]]; then MA=(-map 0:a:0); else MA=(-map 1:a); fi
-ffmpeg -v error -y -i "$SRC" -f lavfi -i anullsrc=r=48000:cl=stereo \
-  -map 0:v:0 "${MA[@]}" \
-  -vf "fps=${FPS},${SCALE},tpad=stop_mode=clone:stop_duration=5,trim=end_frame=${M_FR}" \
+# Watermerk: klein, half-transparant logo over de voorstelvideo (binnen de veilige marge).
+WM_LOGO=$(cfg "c.watermerk&&c.watermerk.logo"); WM_IN=(); VFILT="[0:v]fps=${FPS},${SCALE},tpad=stop_mode=clone:stop_duration=5,trim=end_frame=${M_FR}"
+if [[ -n "$WM_LOGO" && -f "$WM_LOGO" ]]; then
+  WM_W=$(node -e "process.stdout.write(String(Math.round(${W}*$(cfg c.watermerk.breedte_procent)/100/2)*2))")
+  WM_A=$(cfg c.watermerk.zichtbaarheid)
+  MX=$(node -e "process.stdout.write(String(Math.round(${W}*0.06)))")
+  MT=$(node -e "process.stdout.write(String(Math.round(${H}*0.06)))")
+  MB=$(node -e "process.stdout.write(String(Math.round(${H}*(${H}>${W}?0.12:0.06))))")
+  case $(cfg c.watermerk.positie) in
+    rechtsboven) WX="W-w-${MX}"; WY="${MT}";;
+    linksonder)  WX="${MX}";     WY="H-h-${MB}";;
+    rechtsonder) WX="W-w-${MX}"; WY="H-h-${MB}";;
+    *)           WX="${MX}";     WY="${MT}";;
+  esac
+  WM_IN=(-i "$WM_LOGO")
+  VFILT+="[base];[2:v]scale=${WM_W}:-1:flags=lanczos,format=rgba,colorchannelmixer=aa=${WM_A}[wm];[base][wm]overlay=${WX}:${WY}:format=auto"
+fi
+ffmpeg -v error -y -i "$SRC" -f lavfi -i anullsrc=r=48000:cl=stereo "${WM_IN[@]}" \
+  -filter_complex "${VFILT}[mv]" -map "[mv]" "${MA[@]}" \
   -af "aresample=48000,apad,atrim=0:${M_DUR}" \
   -frames:v "$M_FR" "${VENC[@]}" "${AENC[@]}" "$BUILD/n_video.mp4"
 
