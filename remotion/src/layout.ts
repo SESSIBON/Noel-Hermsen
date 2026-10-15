@@ -44,10 +44,14 @@ export const outroLogoBox = (L: Layout, assets: AssetProps): Box => {
 	return {cx: L.width / 2, cy: top + h / 2, w, h};
 };
 
-// Logo onderaan in de CTA. Met socials schuift het logo iets naar links, de socials staan rechts ervan.
+// Ruimte onder het CTA-logo voor de socials-regel.
+export const CTA_SOCIALS_GAP = 18;
+export const CTA_SOCIALS_LINE = 42;
+
+// Logo onderaan in de CTA: klein en gecentreerd, met de socials eronder.
 export const ctaLogoBox = (L: Layout, assets: AssetProps): Box => {
-	const {w, h} = fitLogo(L, assets, 190 * L.u);
-	const cy = L.height - L.safe.bottom - h / 2;
-	const cx = config.cta.socials ? L.width / 2 - L.width * 0.16 : L.width / 2;
-	return {cx, cy, w, h};
+	const {w, h} = fitLogo(L, assets, 140 * L.u);
+	const below = config.cta.socials ? (CTA_SOCIALS_GAP + CTA_SOCIALS_LINE) * L.u : 0;
+	const cy = L.height - L.safe.bottom - below - h / 2;
+	return {cx: L.width / 2, cy, w, h};
 };

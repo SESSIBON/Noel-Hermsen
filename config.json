@@ -1,6 +1,6 @@
 {
   "_uitleg": "Vul hier de teksten in. Alles tussen [HAKEN] moet nog ingevuld worden. Claude Code stopt en vraagt ernaar als er nog haken in staan.",
-  "_uitleg_volgorde": "Begin van de lijst: \"foto\" (stilstaand beeld uit de video), \"teaser\" (kort fragment) of geen van beide.",
+  "_uitleg_volgorde": "Begin van de lijst: \"foto\" (intro opent met een stilstaand beeld uit de video), \"teaser\" (kort fragment vóór de intro) of geen van beide.",
   "volgorde": [
     "foto",
     "intro",
@@ -20,13 +20,13 @@
     "_uitleg": "Kort fragment uit de video waarin je de persoon al ziet, vóór de intro. start = tijdstip in de bronvideo, bijv. \"00:01:12.5\". Laat je hem op null staan, dan stelt Claude Code zelf 3 fragmenten voor en vraagt welke je wilt."
   },
   "foto": {
-    "tijdstip": "00:00:00.32",
-    "duur_seconden": 2.2,
+    "tijdstip": "00:00:07.20",
+    "oogcontact_seconden": 1.0,
     "naam_tonen": true,
-    "_uitleg": "Stilstaand beeld uit de video als opening. tijdstip = moment in de bronvideo. naam_tonen: de naam wordt ingetypt en fadet weer uit."
+    "_uitleg": "Openingsfoto: stilstaand beeld uit de video (tijdstip). Eerst oogcontact (oogcontact_seconden), daarna zakt de foto weg naar de achtergrond en speelt de intro eroverheen. naam_tonen: de naam wordt ingetypt."
   },
   "intro": {
-    "duur_seconden": 6.5,
+    "duur_seconden": 6.0,
     "eyebrow": "Verkiezing 2026",
     "titel": "Finalist Topvrouwen Limburg"
   },

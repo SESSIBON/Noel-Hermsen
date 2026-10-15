@@ -43,6 +43,8 @@ export type AssetProps = {
 	beeldmerk: ImgInfo;
 	logoFc: ImgInfo;
 	fps?: number;
+	// true = de intro opent met de openingsfoto (config.foto) als achtergrond.
+	foto?: boolean;
 };
 
 export const defaultAssetProps: AssetProps = {

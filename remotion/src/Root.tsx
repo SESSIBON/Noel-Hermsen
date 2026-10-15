@@ -3,7 +3,6 @@ import {Composition} from 'remotion';
 import {Intro} from './Intro';
 import {Outro} from './Outro';
 import {Cta} from './Cta';
-import {Foto} from './Foto';
 import {RES_H, RES_W, config, defaultAssetProps} from './theme';
 
 // fps komt van de bronvideo (build.sh geeft hem mee met --props); 25 is de terugvaloptie.
@@ -22,24 +21,19 @@ export const Root: React.FC = () => {
 	return (
 		<>
 			<Composition
-				id="Foto"
-				component={Foto}
-				width={RES_W}
-				height={RES_H}
-				fps={FPS_FALLBACK}
-				durationInFrames={frames(config.foto.duur_seconden, FPS_FALLBACK)}
-				defaultProps={{fps: FPS_FALLBACK}}
-				calculateMetadata={meta(config.foto.duur_seconden)}
-			/>
-			<Composition
 				id="Intro"
 				component={Intro}
 				width={RES_W}
 				height={RES_H}
 				fps={FPS_FALLBACK}
 				durationInFrames={frames(config.intro.duur_seconden, FPS_FALLBACK)}
-				defaultProps={{...defaultAssetProps, fps: FPS_FALLBACK}}
-				calculateMetadata={meta(config.intro.duur_seconden)}
+				defaultProps={{...defaultAssetProps, fps: FPS_FALLBACK, foto: false}}
+				calculateMetadata={({props}: {props: Record<string, unknown>}) => {
+					// Met openingsfoto komt het oogcontact vóór de diamant-animatie.
+					const fps = Number(props.fps) || FPS_FALLBACK;
+					const extra = props.foto ? config.foto.oogcontact_seconden : 0;
+					return {fps, durationInFrames: frames(config.intro.duur_seconden + extra, fps)};
+				}}
 			/>
 			<Composition
 				id="Outro"

@@ -1,7 +1,7 @@
 import React from 'react';
 import {AbsoluteFill, interpolate, useCurrentFrame, useVideoConfig} from 'remotion';
 import {Background, Eyebrow, LogoImg, fadeUp} from './components';
-import {ctaLogoBox, useLayout} from './layout';
+import {CTA_SOCIALS_GAP, CTA_SOCIALS_LINE, ctaLogoBox, useLayout} from './layout';
 import {C, FONT, LOGO_FC, config, progress, type AssetProps} from './theme';
 
 export const Cta: React.FC<AssetProps & {dustOffset: number}> = ({dustOffset, ...assets}) => {
@@ -111,10 +111,13 @@ export const Cta: React.FC<AssetProps & {dustOffset: number}> = ({dustOffset, ..
 				<div
 					style={{
 						position: 'absolute',
-						left: logo.cx + logo.w / 2 + 40 * u,
-						top: logo.cy,
-						transform: `translateY(-50%) translateY(${(1 - urlP) * 24 * u}px)`,
-						opacity: urlP,
+						left: 0,
+						right: 0,
+						top: logo.cy + logo.h / 2 + CTA_SOCIALS_GAP * u,
+						height: CTA_SOCIALS_LINE * u,
+						lineHeight: `${CTA_SOCIALS_LINE * u}px`,
+						textAlign: 'center',
+						...fadeUp(urlP, u),
 						fontFamily: FONT,
 						fontWeight: 400,
 						fontSize: 30 * u,

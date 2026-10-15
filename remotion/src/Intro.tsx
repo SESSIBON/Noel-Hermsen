@@ -9,6 +9,9 @@ import {BEELDMERK, C, FONT, LOGO_FC, config, progress, type AssetProps} from './
 //  2. een lichtflits strijkt van links naar rechts over de diamant;
 //  3. de diamant valt (van links naar rechts) uiteen in gouden vonkjes die wegzweven;
 //  4. het logo met eyebrow en titel komt op.
+// Met een openingsfoto (config.foto) begint het met oogcontact: eerst even haar foto, met de
+// naam die wordt ingetypt; daarna zakt de foto rustig weg naar de achtergrond (gedimd en zacht)
+// en speelt de diamant-animatie eroverheen.
 const T = {
 	diamondIn: 0.1,
 	flareStart: 0.9,
@@ -47,13 +50,17 @@ export const Intro: React.FC<AssetProps> = (assets) => {
 	const {fps, width, height} = useVideoConfig();
 	const L = useLayout(width, height);
 	const {u} = L;
-	const t = frame / fps;
+	// Met foto schuift de hele diamant-animatie op met de duur van het oogcontact.
+	const withFoto = Boolean(assets.foto);
+	const off = withFoto ? config.foto.oogcontact_seconden : 0;
+	const f = frame - off * fps;
+	const t = f / fps;
 
 	const bm = assets.beeldmerk ?? {w: 1, h: 1};
 	const logo = introLogoBox(L, assets);
 
 	// Diamant: groot, iets boven het midden, zoomt heel langzaam in.
-	const dIn = progress(frame, fps, T.diamondIn, 0.9);
+	const dIn = progress(f, fps, T.diamondIn, 0.9);
 	const zoom = interpolate(t, [0, T.dissolveStart + T.dissolveDur], [0.94, 1.02], clamp);
 	const dw = 0.62 * Math.min(width, height) * zoom;
 	const diamond: Box = {cx: width / 2, cy: height * 0.4, w: dw, h: (dw * bm.h) / bm.w};
@@ -71,14 +78,14 @@ export const Intro: React.FC<AssetProps> = (assets) => {
 	const glow = 0.35 + 0.65 * flareI;
 	const mask = `linear-gradient(to right, transparent ${(wipe - 0.08) * 100}%, black ${(wipe + 0.08) * 100}%)`;
 
-	const logoP = progress(frame, fps, T.logoIn, 1.0);
-	const eyebrowP = progress(frame, fps, T.eyebrow, 0.6);
-	const titleP = progress(frame, fps, T.title, 0.7);
+	const logoP = progress(f, fps, T.logoIn, 1.0);
+	const eyebrowP = progress(f, fps, T.eyebrow, 0.6);
+	const titleP = progress(f, fps, T.title, 0.7);
 	const textTop = logo.cy + logo.h / 2 + 72 * u;
 
 	return (
 		<AbsoluteFill>
-			<Background />
+			{withFoto ? <FotoAchtergrond frame={frame} fps={fps} off={off} u={u} /> : <Background />}
 
 			{assets.beeldmerk ? (
 				<>
@@ -91,7 +98,7 @@ export const Intro: React.FC<AssetProps> = (assets) => {
 							width: diamond.w * 2,
 							height: diamond.w * 2,
 							background: `radial-gradient(circle, rgba(202, 165, 79, ${0.22 * glow}) 0%, rgba(202, 165, 79, 0) 55%)`,
-							opacity: dIn * (1 - progress(frame, fps, T.dissolveStart, 1.2)),
+							opacity: dIn * (1 - progress(f, fps, T.dissolveStart, 1.2)),
 						}}
 					/>
 					<Img
@@ -111,6 +118,7 @@ export const Intro: React.FC<AssetProps> = (assets) => {
 				</>
 			) : null}
 
+			{withFoto && config.foto.naam_tonen ? <Naam frame={frame} fps={fps} off={off} L={L} /> : null}
 			{assets.logoFc ? (
 				<LogoImg
 					src={LOGO_FC}
@@ -263,3 +271,87 @@ const Dot: React.FC<{x: number; y: number; size: number; opacity: number; u: num
 			}}
 		/>
 	);
+
+// Openingsfoto: eerst helder (oogcontact), daarna zakt ze weg achter het nachtverloop.
+const FotoAchtergrond: React.FC<{frame: number; fps: number; off: number; u: number}> = ({frame, fps, off, u}) => {
+	const {durationInFrames} = useVideoConfig();
+	const dim = progress(frame, fps, off, 1.0);
+	const zoom = interpolate(frame, [0, durationInFrames], [1, 1.06]);
+	return (
+		<AbsoluteFill style={{backgroundColor: C.navy950}}>
+			<AbsoluteFill style={{transform: `scale(${zoom})`, filter: `blur(${dim * 12 * u}px)`}}>
+				<Img src={staticFile('foto.png')} style={{width: '100%', height: '100%', objectFit: 'cover'}} />
+			</AbsoluteFill>
+			<AbsoluteFill style={{opacity: dim * 0.86}}>
+				<Background />
+			</AbsoluteFill>
+		</AbsoluteFill>
+	);
+};
+
+// Naam wordt letter voor letter ingetypt tijdens het oogcontact en fadet uit als de diamant uiteenvalt.
+const Naam: React.FC<{frame: number; fps: number; off: number; L: ReturnType<typeof useLayout>}> = ({
+	frame,
+	fps,
+	off,
+	L,
+}) => {
+	const {u} = L;
+	const t = frame / fps;
+	const naam = config.persoon.naam;
+	const typeStart = 0.15;
+	const typeEnd = Math.max(typeStart + 0.3, off - 0.2);
+	const typed = Math.round(interpolate(t, [typeStart, typeEnd], [0, naam.length], clamp));
+	const out = progress(frame, fps, off + T.dissolveStart - 0.2, 0.5);
+	const shade = interpolate(t, [0, typeStart + 0.2], [0, 1], clamp) * (1 - progress(frame, fps, off, 1.0));
+	const caretOn = typed < naam.length && t >= typeStart;
+	return (
+		<>
+			<AbsoluteFill
+				style={{
+					background:
+						'linear-gradient(to top, rgba(5, 0, 30, 0.92) 0%, rgba(5, 0, 30, 0.8) 18%, rgba(5, 0, 30, 0.45) 32%, rgba(5, 0, 30, 0) 50%)',
+					opacity: shade,
+				}}
+			/>
+			<div
+				style={{
+					position: 'absolute',
+					left: L.safe.side,
+					right: L.safe.side,
+					bottom: L.safe.bottom + 40 * u,
+					textAlign: 'center',
+					fontFamily: FONT,
+					fontWeight: 700,
+					fontSize: 88 * u,
+					lineHeight: 1.1,
+					color: C.gold500,
+					opacity: 1 - out,
+					transform: `translateY(${-out * 12 * u}px)`,
+					whiteSpace: 'pre',
+					textShadow: `0 0 ${24 * u}px rgba(5, 0, 30, 0.8)`,
+				}}
+			>
+				{/* Volledige naam onzichtbaar erachter: zo staat de getypte tekst al op zijn eindplek. */}
+				<span style={{position: 'relative'}}>
+					<span style={{visibility: 'hidden'}}>{naam}</span>
+					<span style={{position: 'absolute', left: 0, top: 0}}>
+						{naam.slice(0, typed)}
+						{caretOn ? (
+							<span
+								style={{
+									display: 'inline-block',
+									width: Math.max(2, 4 * u),
+									height: '0.9em',
+									marginLeft: 6 * u,
+									background: C.gold500,
+									verticalAlign: '-0.08em',
+								}}
+							/>
+						) : null}
+					</span>
+				</span>
+			</div>
+		</>
+	);
+};
