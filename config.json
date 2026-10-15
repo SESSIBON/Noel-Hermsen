@@ -21,7 +21,7 @@
   },
   "foto": {
     "tijdstip": "00:00:07.20",
-    "oogcontact_seconden": 1.0,
+    "oogcontact_seconden": 0.6,
     "naam_tonen": true,
     "_uitleg": "Openingsfoto: stilstaand beeld uit de video (tijdstip). Eerst oogcontact (oogcontact_seconden), daarna zakt de foto weg naar de achtergrond en speelt de intro eroverheen. naam_tonen: de naam wordt ingetypt."
   },

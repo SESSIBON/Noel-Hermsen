@@ -1,24 +1,29 @@
 import React from 'react';
 import {AbsoluteFill, Easing, Img, interpolate, random, staticFile, useCurrentFrame, useVideoConfig} from 'remotion';
-import {Background, Eyebrow, boxStyle, fadeUp, LogoImg} from './components';
+import {Background, Eyebrow, Sheen, boxStyle, fadeUp} from './components';
 import {introLogoBox, useLayout, type Box} from './layout';
 import {BEELDMERK, C, FONT, LOGO_FC, config, progress, type AssetProps} from './theme';
 
 // Intro in de geest van de motion-referentie:
 //  1. de gouden diamant gloeit op, met fonkelingen eromheen;
 //  2. een lichtflits strijkt van links naar rechts over de diamant;
-//  3. de diamant valt (van links naar rechts) uiteen in gouden vonkjes die wegzweven;
-//  4. het logo met eyebrow en titel komt op.
+//  3. de diamant valt (van links naar rechts) uiteen in gouden vonkjes;
+//  4. de vonkjes worden naar het logo toe gezogen; waar ze samenkomen volgt een gouden
+//     lichtflits met een uitdijende ring, en het logo komt scherp uit het licht tevoorschijn;
+//     één glans strijkt over het logo, daarna eyebrow en titel.
 // Met een openingsfoto (config.foto) begint het met oogcontact: eerst even haar foto, met de
 // naam die wordt ingetypt; daarna zakt de foto rustig weg naar de achtergrond (gedimd en zacht)
 // en speelt de diamant-animatie eroverheen.
 const T = {
-	diamondIn: 0.1,
-	flareStart: 0.9,
-	flareEnd: 2.7,
-	dissolveStart: 2.6,
-	dissolveDur: 0.9,
-	logoIn: 3.5,
+	diamondIn: 0.0,
+	flareStart: 0.6,
+	flareEnd: 2.1,
+	dissolveStart: 2.0,
+	dissolveDur: 0.8,
+	gatherStart: 2.5, // vonkjes worden naar het logo gezogen
+	burst: 3.3, // ze komen samen: lichtflits + ring
+	logoIn: 3.22,
+	logoSheen: 3.95,
 	eyebrow: 4.0,
 	title: 4.15,
 };
@@ -78,7 +83,12 @@ export const Intro: React.FC<AssetProps> = (assets) => {
 	const glow = 0.35 + 0.65 * flareI;
 	const mask = `linear-gradient(to right, transparent ${(wipe - 0.08) * 100}%, black ${(wipe + 0.08) * 100}%)`;
 
-	const logoP = progress(f, fps, T.logoIn, 1.0);
+	// Logo komt uit de flits: van groot, wazig en gloeiend naar scherp op zijn plek.
+	const logoP = progress(f, fps, T.logoIn, 0.7);
+	const logoGlow = 1 - progress(f, fps, T.logoIn, 1.4);
+	const logoScale = 1.14 - 0.14 * logoP;
+	const logoBox: Box = {...logo, w: logo.w * logoScale, h: logo.h * logoScale};
+	const logoSheen = interpolate(t, [T.logoSheen, T.logoSheen + 0.7], [0, 1], clamp);
 	const eyebrowP = progress(f, fps, T.eyebrow, 0.6);
 	const titleP = progress(f, fps, T.title, 0.7);
 	const textTop = logo.cy + logo.h / 2 + 72 * u;
@@ -113,19 +123,27 @@ export const Intro: React.FC<AssetProps> = (assets) => {
 						}}
 					/>
 					<Twinkles diamond={diamond} t={t} u={u} />
-					<Sparks diamond={diamond} t={t} u={u} wipeStart={T.dissolveStart} wipeDur={T.dissolveDur} />
+					<Sparks diamond={diamond} logo={logo} t={t} u={u} wipeStart={T.dissolveStart} wipeDur={T.dissolveDur} />
 					{flareI > 0.001 ? <Flare x={flareX} y={flareY} i={flareI} u={u} width={width} /> : null}
 				</>
 			) : null}
 
 			{withFoto && config.foto.naam_tonen ? <Naam frame={frame} fps={fps} off={off} L={L} /> : null}
 			{assets.logoFc ? (
-				<LogoImg
-					src={LOGO_FC}
-					box={{...logo, w: logo.w * (0.96 + 0.04 * logoP), h: logo.h * (0.96 + 0.04 * logoP)}}
-					opacity={logoP}
-				/>
+				<>
+					<Img
+						src={staticFile(LOGO_FC)}
+						style={{
+							...boxStyle(logoBox),
+							objectFit: 'contain',
+							opacity: Math.min(1, logoP * 1.6),
+							filter: `blur(${(1 - logoP) * 10 * u}px) drop-shadow(0 0 ${14 * u}px rgba(253, 225, 150, ${0.9 * logoGlow})) drop-shadow(0 0 ${40 * u}px rgba(202, 165, 79, ${0.7 * logoGlow}))`,
+						}}
+					/>
+					<Sheen src={LOGO_FC} box={logoBox} p={logoSheen} />
+				</>
 			) : null}
+			<Burst cx={logo.cx} cy={logo.cy - logo.h * 0.1} t={t} at={T.burst} u={u} />
 			<div
 				style={{
 					position: 'absolute',
@@ -220,9 +238,11 @@ const Twinkles: React.FC<{diamond: Box; t: number; u: number}> = ({diamond, t, u
 	</>
 );
 
-// Vonkjes die op de lijnen van de diamant ontstaan wanneer de veeg langskomt en dan wegzweven.
-const Sparks: React.FC<{diamond: Box; t: number; u: number; wipeStart: number; wipeDur: number}> = ({
+// Vonkjes die op de lijnen van de diamant ontstaan wanneer de veeg langskomt. Een deel zweeft weg,
+// de rest wordt daarna naar het logo gezogen en dooft precies als het logo uit de flits komt.
+const Sparks: React.FC<{diamond: Box; logo: Box; t: number; u: number; wipeStart: number; wipeDur: number}> = ({
 	diamond,
+	logo,
 	t,
 	u,
 	wipeStart,
@@ -239,21 +259,77 @@ const Sparks: React.FC<{diamond: Box; t: number; u: number; wipeStart: number; w
 			// Moment van loskomen volgt de veeg (die loopt van -0,15 naar 1,15 over wipeDur).
 			const release = wipeStart + ((fx + 0.15) / 1.3) * wipeDur + random(`sp-d-${i}`) * 0.12;
 			const age = t - release;
-			const life = 1.0 + random(`sp-l-${i}`) * 0.9;
+			const gather = random(`sp-g-${i}`) < 0.7;
+			const life = gather ? 2.5 : 1.0 + random(`sp-l-${i}`) * 0.9;
 			if (age < 0 || age > life) return null;
 			const dirX = x0 - diamond.cx;
 			const dirY = y0 - diamond.cy;
 			const len = Math.hypot(dirX, dirY) || 1;
 			const speed = (60 + random(`sp-v-${i}`) * 160) * u;
-			const ease = 1 - Math.pow(1 - age / life, 2);
-			const x = x0 + (dirX / len) * speed * ease * life + Math.sin(age * 3 + i) * 6 * u;
-			const y = y0 + (dirY / len) * speed * ease * life - age * 40 * u;
-			const opacity = interpolate(age, [0, 0.1, life * 0.5, life], [0, 1, 0.8, 0], clamp);
+			const span = gather ? 1.4 : life;
+			const ease = 1 - Math.pow(1 - Math.min(age / span, 1), 2);
+			let x = x0 + (dirX / len) * speed * ease * span + Math.sin(age * 3 + i) * 6 * u;
+			let y = y0 + (dirY / len) * speed * ease * span - age * 40 * u;
 			const size = (3 + random(`sp-s-${i}`) * 7) * u;
-			return <Dot key={i} x={x} y={y} size={size} opacity={opacity} u={u} />;
+			if (!gather) {
+				const opacity = interpolate(age, [0, 0.1, life * 0.5, life], [0, 1, 0.8, 0], clamp);
+				return <Dot key={i} x={x} y={y} size={size} opacity={opacity} u={u} />;
+			}
+			// Aantrekken: versnellend naar een punt binnen het logo.
+			const pull = Math.pow(interpolate(t, [T.gatherStart, T.burst], [0, 1], clamp), 3);
+			const tx = logo.cx + (random(`sp-tx-${i}`) - 0.5) * logo.w * 0.7;
+			const ty = logo.cy + (random(`sp-ty-${i}`) - 0.5) * logo.h * 0.7;
+			x += (tx - x) * pull;
+			y += (ty - y) * pull;
+			const opacity = interpolate(age, [0, 0.1], [0, 1], clamp) * interpolate(t, [T.burst - 0.06, T.burst + 0.04], [1, 0], clamp);
+			return <Dot key={i} x={x} y={y} size={size * (1 - 0.4 * pull)} opacity={opacity} u={u} />;
 		})}
 	</>
 );
+
+// Gouden lichtflits met twee uitdijende ringen op het moment dat de vonkjes samenkomen.
+const Burst: React.FC<{cx: number; cy: number; t: number; at: number; u: number}> = ({cx, cy, t, at, u}) => {
+	if (t < at - 0.1 || t > at + 1.2) return null;
+	const flash = interpolate(t, [at - 0.06, at + 0.04, at + 0.7], [0, 1, 0], {...clamp, easing: Easing.out(Easing.quad)});
+	const flashSize = 1200 * u;
+	const ring = (delay: number, strength: number, maxR: number) => {
+		const p = interpolate(t, [at + delay, at + delay + 1.0], [0, 1], clamp);
+		if (p <= 0 || p >= 1) return null;
+		const r = (40 + (maxR - 40) * Easing.out(Easing.cubic)(p)) * u;
+		return (
+			<div
+				style={{
+					position: 'absolute',
+					left: cx - r,
+					top: cy - r,
+					width: r * 2,
+					height: r * 2,
+					borderRadius: '50%',
+					border: `${Math.max(1, (4 - 3 * p) * u)}px solid ${C.gold300}`,
+					boxShadow: `0 0 ${18 * u}px ${C.gold500}, inset 0 0 ${18 * u}px ${C.gold500}`,
+					opacity: strength * (1 - p),
+				}}
+			/>
+		);
+	};
+	return (
+		<AbsoluteFill style={{mixBlendMode: 'screen'}}>
+			<div
+				style={{
+					position: 'absolute',
+					left: cx - flashSize / 2,
+					top: cy - flashSize / 2,
+					width: flashSize,
+					height: flashSize,
+					borderRadius: '50%',
+					background: `radial-gradient(circle, rgba(255, 255, 255, ${0.95 * flash}) 0%, rgba(253, 225, 150, ${0.75 * flash}) 12%, rgba(202, 165, 79, ${0.3 * flash}) 32%, rgba(202, 165, 79, 0) 60%)`,
+				}}
+			/>
+			{ring(0, 0.9, 620)}
+			{ring(0.14, 0.5, 820)}
+		</AbsoluteFill>
+	);
+};
 
 const Dot: React.FC<{x: number; y: number; size: number; opacity: number; u: number}> = ({x, y, size, opacity, u}) =>
 	opacity <= 0.001 ? null : (
@@ -275,7 +351,7 @@ const Dot: React.FC<{x: number; y: number; size: number; opacity: number; u: num
 // Openingsfoto: eerst helder (oogcontact), daarna zakt ze weg achter het nachtverloop.
 const FotoAchtergrond: React.FC<{frame: number; fps: number; off: number; u: number}> = ({frame, fps, off, u}) => {
 	const {durationInFrames} = useVideoConfig();
-	const dim = progress(frame, fps, off, 1.0);
+	const dim = progress(frame, fps, off, 0.8);
 	const zoom = interpolate(frame, [0, durationInFrames], [1, 1.06]);
 	return (
 		<AbsoluteFill style={{backgroundColor: C.navy950}}>
