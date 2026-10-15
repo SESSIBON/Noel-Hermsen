@@ -2,3 +2,5 @@ node_modules
 out
 # logo's worden door build.sh uit ../assets gekopieerd
 public/*.png
+# door build.sh gekopieerde config van de persoon die gerenderd wordt
+src/actief.json

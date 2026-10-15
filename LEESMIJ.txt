@@ -11,3 +11,9 @@ Claude Code leest CLAUDE.md automatisch en maakt: teaser > intro > video > outro
 Laat je teaser.start leeg, dan stelt Claude Code zelf 3 fragmenten voor. Resultaat komt in de map "output".
 
 Teksten later aanpassen? Wijzig config.json en vraag Claude Code: "render opnieuw".
+
+Meerdere personen
+- Elke persoon kan een eigen config krijgen in de map "personen", bijv. personen/margo-de-kock.json
+  (kopie van config.json met andere naam, bronvideo, output en foto.tijdstip).
+- Renderen:   ./build.sh personen/margo-de-kock.json
+- bron_start_seconden in de config knipt stilte aan het begin van de video weg (bijv. 0.9).

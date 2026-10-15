@@ -1,27 +1,32 @@
 #!/usr/bin/env bash
 # Topvrouwen Limburg: (teaser ->) intro (eventueel met openingsfoto) -> volledige video -> outro -> CTA. Volgorde: zie config.json.
-# Gebruik:  ./build.sh            (alles, van begin tot eind)
-#           ./build.sh --preview  (rendert ook als logo-PNG's ontbreken; alleen om de opmaak te bekijken)
+# Gebruik:  ./build.sh                              (alles, met config.json)
+#           ./build.sh personen/margo-de-kock.json   (andere persoon: eigen config-bestand)
+#           ./build.sh --preview [config]           (rendert ook als logo-PNG's ontbreken; alleen om de opmaak te bekijken)
 set -euo pipefail
 cd "$(dirname "$0")"
 
 PREVIEW=0
-[[ "${1:-}" == "--preview" ]] && PREVIEW=1
+[[ "${1:-}" == "--preview" ]] && { PREVIEW=1; shift; }
+CONFIG="${1:-config.json}"
+[[ -f "$CONFIG" ]] || { echo "Config niet gevonden: $CONFIG"; exit 1; }
+export CONFIG_PATH="$(cd "$(dirname "$CONFIG")" && pwd)/$(basename "$CONFIG")"
+echo "Config: $CONFIG"
 
 need() { command -v "$1" >/dev/null || { echo "Ontbreekt: $1 (macOS: brew install ffmpeg node)"; exit 1; }; }
 need ffmpeg; need ffprobe; need node
 node -e 'process.exit(+process.versions.node.split(".")[0] < 18 ? 1 : 0)' || { echo "Node.js 18+ nodig"; exit 1; }
 
-cfg() { node -e "const c=require('./config.json');const v=$1;process.stdout.write(v===null||v===undefined?'':String(v))"; }
+cfg() { node -e "const c=require(process.env.CONFIG_PATH);const v=$1;process.stdout.write(v===null||v===undefined?'':String(v))"; }
 
 # --- Stap 0: config controleren --------------------------------------------------
 if node -e '
-  const c=require("./config.json");
+  const c=require(process.env.CONFIG_PATH);
   const bad=[];
   (function walk(o,p){for(const[k,v]of Object.entries(o)){if(k.startsWith("_"))continue;
     if(typeof v==="string"&&/\[[^\]]+\]/.test(v))bad.push(p+k+": "+v);
     else if(v&&typeof v==="object")walk(v,p+k+".");}})(c,"");
-  if(bad.length){console.log("Nog in te vullen in config.json:\n  "+bad.join("\n  "));process.exit(1)}'; then :; else exit 1; fi
+  if(bad.length){console.log("Nog in te vullen in "+process.env.CONFIG_PATH+":\n  "+bad.join("\n  "));process.exit(1)}'; then :; else exit 1; fi
 
 SRC=$(cfg c.bronvideo)
 OUT=$(cfg c.output)
@@ -62,8 +67,9 @@ tosec() { node -e "const s='$1';process.stdout.write(String(s.includes(':')?s.sp
 BUILD=build
 mkdir -p "$BUILD" "$(dirname "$OUT")"
 
-# --- Assets naar Remotion ---------------------------------------------------------
+# --- Assets en config naar Remotion -------------------------------------------------
 mkdir -p remotion/public
+cp -f "$CONFIG_PATH" remotion/src/actief.json
 cp -f assets/*.png remotion/public/ 2>/dev/null || true
 imginfo() {
   local f="assets/$1"
@@ -85,7 +91,7 @@ FOTO_PROP=$([[ $USE_FOTO == 1 ]] && echo true || echo false)
 PROPS="{\"beeldmerk\":$BM,\"logoFc\":$LOGO,\"fps\":$FPS,\"foto\":$FOTO_PROP}"
 COMPS=(Intro Outro Cta)
 if [[ $USE_FOTO == 1 ]]; then
-  [[ -n "$FOTO_T" ]] || { echo "foto.tijdstip ontbreekt in config.json"; exit 1; }
+  [[ -n "$FOTO_T" ]] || { echo "foto.tijdstip ontbreekt in $CONFIG"; exit 1; }
   # "Screenshot" uit de bronvideo, beeldvullend op de eindmaat.
   ffmpeg -v error -y -ss "$(tosec "$FOTO_T")" -i "$SRC" -frames:v 1 \
     -vf "scale=${W}:${H}:force_original_aspect_ratio=increase:flags=lanczos:in_range=${SRC_RANGE:-tv},crop=${W}:${H}" \
@@ -127,9 +133,11 @@ fi
 
 # Hoofdvideo: volledig. Is het geluid langer dan het beeld, dan wordt het laatste frame
 # vastgehouden (geluid wordt nooit afgekapt); daarna alles op hele frames.
+# bron_start_seconden: zoveel stilte aan het begin van de bron wordt overgeslagen (0 = niets).
+TRIM=$(cfg "c.bron_start_seconden||0")
 V_DUR=$(ffprobe -v error -select_streams v:0 -show_entries stream=duration -of default=nw=1:nk=1 "$SRC")
 A_DUR=$([[ $HAS_AUDIO == 1 ]] && ffprobe -v error -select_streams a:0 -show_entries stream=duration -of default=nw=1:nk=1 "$SRC" || echo 0)
-M_FR=$(node -e "process.stdout.write(String(Math.ceil(Math.max($V_DUR,$A_DUR)*$FPS-1e-6)))")
+M_FR=$(node -e "process.stdout.write(String(Math.ceil((Math.max($V_DUR,$A_DUR)-$TRIM)*$FPS-1e-6)))")
 M_DUR=$(sec "$M_FR")
 if [[ $HAS_AUDIO == 1 ]]; then MA=(-map 0:a:0); else MA=(-map 1:a); fi
 # Watermerk: klein, half-transparant logo over de voorstelvideo (binnen de veilige marge).
@@ -149,7 +157,7 @@ if [[ -n "$WM_LOGO" && -f "$WM_LOGO" ]]; then
   WM_IN=(-i "$WM_LOGO")
   VFILT+="[base];[2:v]scale=${WM_W}:-1:flags=lanczos,format=rgba,colorchannelmixer=aa=${WM_A}[wm];[base][wm]overlay=${WX}:${WY}:format=auto"
 fi
-ffmpeg -v error -y -i "$SRC" -f lavfi -i anullsrc=r=48000:cl=stereo "${WM_IN[@]}" \
+ffmpeg -v error -y -ss "$TRIM" -i "$SRC" -f lavfi -i anullsrc=r=48000:cl=stereo "${WM_IN[@]}" \
   -filter_complex "${VFILT}[mv]" -map "[mv]" "${MA[@]}" \
   -af "aresample=48000,apad,atrim=0:${M_DUR}" \
   -frames:v "$M_FR" "${VENC[@]}" "${AENC[@]}" "$BUILD/n_video.mp4"

@@ -1,6 +1,7 @@
 import {Easing, interpolate, staticFile} from 'remotion';
 import {loadFont} from '@remotion/fonts';
-import config from '../../config.json';
+// actief.json = kopie van de config waarmee build.sh draait (config.json of personen/*.json).
+import config from './actief.json';
 
 export {config};
 
