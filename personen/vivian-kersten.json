@@ -9,7 +9,7 @@
     "cta"
   ],
   "bronvideo": "input/vivian-kersten.mov",
-  "bron_start_seconden": 0.8,
+  "bron_start_seconden": 2.1,
   "_uitleg_bron_start": "Zoveel seconden stilte aan het begin van de bronvideo wordt weggeknipt (0 = niets).",
   "output": "output/vivian-kersten-topvrouwen-limburg.mp4",
   "persoon": {
