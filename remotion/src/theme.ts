@@ -53,5 +53,61 @@ export const defaultAssetProps: AssetProps = {
 	logoFc: {w: 1250, h: 880},
 };
 
-export const BEELDMERK = 'beeldmerk-goud.png';
-export const LOGO_FC = 'logo-fc-wit.png';
+// Thema per categorie (design system): Topvrouw = donker (navy met goud),
+// Young Female Talent = goud (gouden verloop met navy). config.thema: "topvrouw" (standaard) of "yftl".
+export const YFTL = (config as {thema?: string}).thema === 'yftl';
+
+// Het fc-logo mag nooit op goud (goud op goud). Op het gouden YFTL-verloop gebruiken we daarom
+// het eenkleurig witte logo, en voor de diamant-animatie de diamant uit dat witte logo
+// (beeldmerk-wit.png = uitsnede van logo-wit.png, niet hertekend of herkleurd).
+export const BEELDMERK = YFTL ? 'beeldmerk-wit.png' : 'beeldmerk-goud.png';
+export const LOGO_FC = YFTL ? 'logo-wit.png' : 'logo-fc-wit.png';
+
+// rgb-tripels voor lichteffecten (flits, gloed, vonkjes), zodat ze met elke opacity werken.
+const rgb = (hex: string) => [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16)).join(', ');
+
+export const P = YFTL
+	? {
+			bg: `linear-gradient(to bottom right, ${C.gold700} 0%, ${C.gold500} 42%, ${C.gold300} 78%, ${C.gold200} 100%)`,
+			vignette: 'rgba(173, 113, 50, 0)',
+			vignetteEdge: 'rgba(173, 113, 50, 0.35)',
+			base: C.gold700,
+			accent: C.navy950,
+			text: C.navy950,
+			textMuted: 'rgba(5, 0, 30, 0.75)',
+			btnBg: C.navy950,
+			btnText: C.gold300,
+			btnSheen: rgb(C.white),
+			end: C.gold700,
+			fxHi: rgb(C.white),
+			fxMid: rgb(C.white),
+			fxSoft: rgb(C.white),
+			dot: C.white,
+			dotGlow: 'rgba(255, 255, 255, 0.9)',
+			dotGlow2: 'rgba(255, 255, 255, 0.9)',
+			dust: C.white,
+			ring: C.white,
+			shade: rgb(C.gold200),
+		}
+	: {
+			bg: `linear-gradient(to bottom right, ${C.navy950} 0%, ${C.navy900} 50%, ${C.navy700} 100%)`,
+			vignette: 'rgba(5, 0, 30, 0)',
+			vignetteEdge: 'rgba(5, 0, 30, 0.55)',
+			base: C.navy950,
+			accent: C.gold500,
+			text: C.white,
+			textMuted: C.white70,
+			btnBg: C.white,
+			btnText: C.gold500,
+			btnSheen: rgb(C.gold300),
+			end: C.navy950,
+			fxHi: rgb(C.gold200),
+			fxMid: rgb(C.gold500),
+			fxSoft: rgb(C.gold300),
+			dot: C.gold200,
+			dotGlow: C.gold500,
+			dotGlow2: C.gold300,
+			dust: C.gold300,
+			ring: C.gold300,
+			shade: rgb(C.navy950),
+		};

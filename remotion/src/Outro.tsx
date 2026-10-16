@@ -2,7 +2,7 @@ import React from 'react';
 import {AbsoluteFill, useCurrentFrame, useVideoConfig} from 'remotion';
 import {Background, Eyebrow, LogoImg, fadeUp} from './components';
 import {ctaLogoBox, outroLogoBox, outroNameBottom, useLayout} from './layout';
-import {C, FONT, LOGO_FC, config, progress, type AssetProps} from './theme';
+import {FONT, LOGO_FC, P, config, progress, type AssetProps} from './theme';
 
 export const Outro: React.FC<AssetProps> = (assets) => {
 	const frame = useCurrentFrame();
@@ -52,7 +52,7 @@ export const Outro: React.FC<AssetProps> = (assets) => {
 						fontWeight: 700,
 						fontSize: 88 * u,
 						lineHeight: 1.1,
-						color: C.gold500,
+						color: P.accent,
 						textAlign: 'center',
 						textWrap: 'balance',
 					}}
@@ -73,7 +73,7 @@ export const Outro: React.FC<AssetProps> = (assets) => {
 					fontSize: 30 * u,
 					letterSpacing: 4 * u,
 					textTransform: 'uppercase',
-					color: C.white,
+					color: P.text,
 					...fadeUp(logoP, u),
 					opacity: logoP * keep,
 				}}

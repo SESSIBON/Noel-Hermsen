@@ -9,20 +9,20 @@ import {
 	useCurrentFrame,
 	useVideoConfig,
 } from 'remotion';
-import {C, FONT} from './theme';
+import {C, FONT, P} from './theme';
 import type {Box, Layout} from './layout';
 
 // Nachtverloop: navy-950 linksboven -> navy-900 -> navy-700 rechtsonder, met zachte vignettering.
 export const Background: React.FC<{dustOffset?: number}> = ({dustOffset = 0}) => (
 	<AbsoluteFill
 		style={{
-			background: `linear-gradient(to bottom right, ${C.navy950} 0%, ${C.navy900} 50%, ${C.navy700} 100%)`,
+			background: P.bg,
 		}}
 	>
 		<AbsoluteFill
 			style={{
 				background:
-					'radial-gradient(ellipse 85% 75% at 50% 45%, rgba(5, 0, 30, 0) 55%, rgba(5, 0, 30, 0.55) 100%)',
+					`radial-gradient(ellipse 85% 75% at 50% 45%, ${P.vignette} 55%, ${P.vignetteEdge} 100%)`,
 			}}
 		/>
 		<GoldDust offset={dustOffset} />
@@ -60,9 +60,9 @@ const GoldDust: React.FC<{offset: number}> = ({offset}) => {
 							width: size,
 							height: size,
 							borderRadius: '50%',
-							background: C.gold300,
+							background: P.dust,
 							opacity: opacity * twinkle,
-							boxShadow: `0 0 ${size * 3}px ${C.gold300}`,
+							boxShadow: `0 0 ${size * 3}px ${P.dust}`,
 						}}
 					/>
 				);
@@ -93,7 +93,7 @@ export const Eyebrow: React.FC<{text: string; L: Layout; style?: React.CSSProper
 				fontSize: 26 * L.u,
 				letterSpacing: '0.18em',
 				textTransform: 'uppercase',
-				color: C.gold500,
+				color: P.accent,
 				whiteSpace: 'nowrap',
 			}}
 		>
@@ -103,7 +103,7 @@ export const Eyebrow: React.FC<{text: string; L: Layout; style?: React.CSSProper
 			style={{
 				width: 72 * L.u,
 				height: Math.max(1, 2 * L.u),
-				background: C.gold500,
+				background: P.accent,
 				opacity: 0.6,
 				flexShrink: 0,
 			}}
@@ -152,7 +152,7 @@ export const Sheen: React.FC<{src: string; box: Box; p: number}> = ({src, box, p
 		<div
 			style={{
 				...boxStyle(box),
-				background: `linear-gradient(115deg, rgba(253, 225, 150, 0) ${pos - 22}%, ${C.gold200} ${pos}%, rgba(253, 225, 150, 0) ${pos + 22}%)`,
+				background: `linear-gradient(115deg, rgba(${P.fxHi}, 0) ${pos - 22}%, rgba(${P.fxHi}, 1) ${pos}%, rgba(${P.fxHi}, 0) ${pos + 22}%)`,
 				mixBlendMode: 'screen',
 				WebkitMask: mask,
 				mask,

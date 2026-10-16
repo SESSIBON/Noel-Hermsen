@@ -79,7 +79,9 @@ imginfo() {
     echo null
   fi
 }
-BM=$(imginfo beeldmerk-goud.png); LOGO=$(imginfo logo-fc-wit.png)
+# YFTL (gouden thema): wit logo en witte diamant, want het fc-logo mag niet op goud.
+if [[ "$(cfg c.thema)" == yftl ]]; then BM=$(imginfo beeldmerk-wit.png); LOGO=$(imginfo logo-wit.png)
+else BM=$(imginfo beeldmerk-goud.png); LOGO=$(imginfo logo-fc-wit.png); fi
 if [[ "$BM" == null || "$LOGO" == null ]]; then
   if [[ $PREVIEW == 1 ]]; then
     echo "LET OP: logo-PNG's ontbreken in assets/; preview zonder logo."

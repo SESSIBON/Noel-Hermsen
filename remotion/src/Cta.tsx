@@ -2,7 +2,7 @@ import React from 'react';
 import {AbsoluteFill, interpolate, useCurrentFrame, useVideoConfig} from 'remotion';
 import {Background, Eyebrow, LogoImg, fadeUp} from './components';
 import {CTA_SOCIALS_GAP, CTA_SOCIALS_LINE, ctaLogoBox, useLayout} from './layout';
-import {C, FONT, LOGO_FC, config, progress, type AssetProps} from './theme';
+import {FONT, LOGO_FC, P, config, progress, type AssetProps} from './theme';
 
 export const Cta: React.FC<AssetProps & {dustOffset: number}> = ({dustOffset, ...assets}) => {
 	const frame = useCurrentFrame();
@@ -52,7 +52,7 @@ export const Cta: React.FC<AssetProps & {dustOffset: number}> = ({dustOffset, ..
 						fontWeight: 700,
 						fontSize: 76 * u,
 						lineHeight: 1.12,
-						color: C.gold500,
+						color: P.accent,
 						textAlign: 'center',
 						textWrap: 'balance',
 					}}
@@ -65,8 +65,8 @@ export const Cta: React.FC<AssetProps & {dustOffset: number}> = ({dustOffset, ..
 						height: 96 * u,
 						padding: `0 ${52 * u}px`,
 						borderRadius: 999,
-						background: C.white,
-						color: C.gold500,
+						background: P.btnBg,
+						color: P.btnText,
 						fontFamily: FONT,
 						fontWeight: 700,
 						fontSize: 34 * u,
@@ -87,7 +87,7 @@ export const Cta: React.FC<AssetProps & {dustOffset: number}> = ({dustOffset, ..
 							style={{
 								position: 'absolute',
 								inset: 0,
-								background: `linear-gradient(115deg, rgba(247, 217, 142, 0) ${sheenPos - 18}%, rgba(247, 217, 142, 0.45) ${sheenPos}%, rgba(247, 217, 142, 0) ${sheenPos + 18}%)`,
+								background: `linear-gradient(115deg, rgba(${P.btnSheen}, 0) ${sheenPos - 18}%, rgba(${P.btnSheen}, 0.45) ${sheenPos}%, rgba(${P.btnSheen}, 0) ${sheenPos + 18}%)`,
 							}}
 						/>
 					) : null}
@@ -99,7 +99,7 @@ export const Cta: React.FC<AssetProps & {dustOffset: number}> = ({dustOffset, ..
 						fontFamily: FONT,
 						fontWeight: 400,
 						fontSize: 30 * u,
-						color: C.white70,
+						color: P.textMuted,
 						textAlign: 'center',
 					}}
 				>
@@ -121,14 +121,14 @@ export const Cta: React.FC<AssetProps & {dustOffset: number}> = ({dustOffset, ..
 						fontFamily: FONT,
 						fontWeight: 400,
 						fontSize: 30 * u,
-						color: C.white70,
+						color: P.textMuted,
 						whiteSpace: 'nowrap',
 					}}
 				>
 					{config.cta.socials}
 				</div>
 			) : null}
-			<AbsoluteFill style={{background: C.navy950, opacity: fadeToNavy}} />
+			<AbsoluteFill style={{background: P.end, opacity: fadeToNavy}} />
 		</AbsoluteFill>
 	);
 };

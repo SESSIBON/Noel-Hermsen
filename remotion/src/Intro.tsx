@@ -2,7 +2,7 @@ import React from 'react';
 import {AbsoluteFill, Easing, Img, interpolate, random, staticFile, useCurrentFrame, useVideoConfig} from 'remotion';
 import {Background, Eyebrow, Sheen, boxStyle, fadeUp} from './components';
 import {introLogoBox, useLayout, type Box} from './layout';
-import {BEELDMERK, C, FONT, LOGO_FC, config, progress, type AssetProps} from './theme';
+import {BEELDMERK, FONT, LOGO_FC, P, config, progress, type AssetProps} from './theme';
 
 // Intro in de geest van de motion-referentie:
 //  1. de gouden diamant gloeit op, met fonkelingen eromheen;
@@ -107,7 +107,7 @@ export const Intro: React.FC<AssetProps> = (assets) => {
 							top: diamond.cy - diamond.w,
 							width: diamond.w * 2,
 							height: diamond.w * 2,
-							background: `radial-gradient(circle, rgba(202, 165, 79, ${0.22 * glow}) 0%, rgba(202, 165, 79, 0) 55%)`,
+							background: `radial-gradient(circle, rgba(${P.fxMid}, ${0.22 * glow}) 0%, rgba(${P.fxMid}, 0) 55%)`,
 							opacity: dIn * (1 - progress(f, fps, T.dissolveStart, 1.2)),
 						}}
 					/>
@@ -117,7 +117,7 @@ export const Intro: React.FC<AssetProps> = (assets) => {
 							...boxStyle(diamond),
 							objectFit: 'contain',
 							opacity: dIn,
-							filter: `drop-shadow(0 0 ${6 * u}px rgba(253, 225, 150, ${0.9 * glow})) drop-shadow(0 0 ${22 * u}px rgba(202, 165, 79, ${0.7 * glow}))`,
+							filter: `drop-shadow(0 0 ${6 * u}px rgba(${P.fxHi}, ${0.9 * glow})) drop-shadow(0 0 ${22 * u}px rgba(${P.fxMid}, ${0.7 * glow}))`,
 							WebkitMaskImage: mask,
 							maskImage: mask,
 						}}
@@ -137,7 +137,7 @@ export const Intro: React.FC<AssetProps> = (assets) => {
 							...boxStyle(logoBox),
 							objectFit: 'contain',
 							opacity: Math.min(1, logoP * 1.6),
-							filter: `blur(${(1 - logoP) * 10 * u}px) drop-shadow(0 0 ${14 * u}px rgba(253, 225, 150, ${0.9 * logoGlow})) drop-shadow(0 0 ${40 * u}px rgba(202, 165, 79, ${0.7 * logoGlow}))`,
+							filter: `blur(${(1 - logoP) * 10 * u}px) drop-shadow(0 0 ${14 * u}px rgba(${P.fxHi}, ${0.9 * logoGlow})) drop-shadow(0 0 ${40 * u}px rgba(${P.fxMid}, ${0.7 * logoGlow}))`,
 						}}
 					/>
 					<Sheen src={LOGO_FC} box={logoBox} p={logoSheen} />
@@ -164,7 +164,7 @@ export const Intro: React.FC<AssetProps> = (assets) => {
 						fontWeight: 700,
 						fontSize: 88 * u,
 						lineHeight: 1.1,
-						color: C.gold500,
+						color: P.accent,
 						textAlign: 'center',
 						textWrap: 'balance',
 					}}
@@ -191,7 +191,7 @@ const Flare: React.FC<{x: number; y: number; i: number; u: number; width: number
 					width: halo,
 					height: halo,
 					borderRadius: '50%',
-					background: `radial-gradient(circle, rgba(247, 217, 142, ${0.75 * i}) 0%, rgba(202, 165, 79, ${0.28 * i}) 30%, rgba(202, 165, 79, 0) 70%)`,
+					background: `radial-gradient(circle, rgba(${P.fxSoft}, ${0.75 * i}) 0%, rgba(${P.fxMid}, ${0.28 * i}) 30%, rgba(${P.fxMid}, 0) 70%)`,
 				}}
 			/>
 			<div
@@ -202,7 +202,7 @@ const Flare: React.FC<{x: number; y: number; i: number; u: number; width: number
 					width: streakW,
 					height: 10 * u,
 					borderRadius: '50%',
-					background: `linear-gradient(to right, rgba(253, 225, 150, 0) 0%, rgba(253, 225, 150, ${0.95 * i}) 50%, rgba(253, 225, 150, 0) 100%)`,
+					background: `linear-gradient(to right, rgba(${P.fxHi}, 0) 0%, rgba(${P.fxHi}, ${0.95 * i}) 50%, rgba(${P.fxHi}, 0) 100%)`,
 					filter: `blur(${2 * u}px)`,
 				}}
 			/>
@@ -214,7 +214,7 @@ const Flare: React.FC<{x: number; y: number; i: number; u: number; width: number
 					width: core,
 					height: core,
 					borderRadius: '50%',
-					background: `radial-gradient(circle, rgba(255, 255, 255, ${i}) 0%, rgba(255, 255, 255, ${0.9 * i}) 15%, rgba(253, 225, 150, ${0.8 * i}) 35%, rgba(253, 225, 150, 0) 70%)`,
+					background: `radial-gradient(circle, rgba(255, 255, 255, ${i}) 0%, rgba(255, 255, 255, ${0.9 * i}) 15%, rgba(${P.fxHi}, ${0.8 * i}) 35%, rgba(${P.fxHi}, 0) 70%)`,
 				}}
 			/>
 		</AbsoluteFill>
@@ -305,8 +305,8 @@ const Burst: React.FC<{cx: number; cy: number; t: number; at: number; u: number}
 					width: r * 2,
 					height: r * 2,
 					borderRadius: '50%',
-					border: `${Math.max(1, (4 - 3 * p) * u)}px solid ${C.gold300}`,
-					boxShadow: `0 0 ${18 * u}px ${C.gold500}, inset 0 0 ${18 * u}px ${C.gold500}`,
+					border: `${Math.max(1, (4 - 3 * p) * u)}px solid ${P.ring}`,
+					boxShadow: `0 0 ${18 * u}px ${P.dotGlow}, inset 0 0 ${18 * u}px ${P.dotGlow}`,
 					opacity: strength * (1 - p),
 				}}
 			/>
@@ -322,7 +322,7 @@ const Burst: React.FC<{cx: number; cy: number; t: number; at: number; u: number}
 					width: flashSize,
 					height: flashSize,
 					borderRadius: '50%',
-					background: `radial-gradient(circle, rgba(255, 255, 255, ${0.95 * flash}) 0%, rgba(253, 225, 150, ${0.75 * flash}) 12%, rgba(202, 165, 79, ${0.3 * flash}) 32%, rgba(202, 165, 79, 0) 60%)`,
+					background: `radial-gradient(circle, rgba(255, 255, 255, ${0.95 * flash}) 0%, rgba(${P.fxHi}, ${0.75 * flash}) 12%, rgba(${P.fxMid}, ${0.3 * flash}) 32%, rgba(${P.fxMid}, 0) 60%)`,
 				}}
 			/>
 			{ring(0, 0.9, 620)}
@@ -341,9 +341,9 @@ const Dot: React.FC<{x: number; y: number; size: number; opacity: number; u: num
 				width: size,
 				height: size,
 				borderRadius: '50%',
-				background: C.gold200,
+				background: P.dot,
 				opacity,
-				boxShadow: `0 0 ${size * 2.5}px ${C.gold500}, 0 0 ${4 * u}px ${C.gold300}`,
+				boxShadow: `0 0 ${size * 2.5}px ${P.dotGlow}, 0 0 ${4 * u}px ${P.dotGlow2}`,
 			}}
 		/>
 	);
@@ -354,7 +354,7 @@ const FotoAchtergrond: React.FC<{frame: number; fps: number; off: number; u: num
 	const dim = progress(frame, fps, off, 0.8);
 	const zoom = interpolate(frame, [0, durationInFrames], [1, 1.06]);
 	return (
-		<AbsoluteFill style={{backgroundColor: C.navy950}}>
+		<AbsoluteFill style={{backgroundColor: P.base}}>
 			<AbsoluteFill style={{transform: `scale(${zoom})`, filter: `blur(${dim * 12 * u}px)`}}>
 				<Img src={staticFile('foto.png')} style={{width: '100%', height: '100%', objectFit: 'cover'}} />
 			</AbsoluteFill>
@@ -386,7 +386,7 @@ const Naam: React.FC<{frame: number; fps: number; off: number; L: ReturnType<typ
 			<AbsoluteFill
 				style={{
 					background:
-						'linear-gradient(to top, rgba(5, 0, 30, 0.92) 0%, rgba(5, 0, 30, 0.8) 18%, rgba(5, 0, 30, 0.45) 32%, rgba(5, 0, 30, 0) 50%)',
+						`linear-gradient(to top, rgba(${P.shade}, 0.92) 0%, rgba(${P.shade}, 0.8) 18%, rgba(${P.shade}, 0.45) 32%, rgba(${P.shade}, 0) 50%)`,
 					opacity: shade,
 				}}
 			/>
@@ -401,11 +401,11 @@ const Naam: React.FC<{frame: number; fps: number; off: number; L: ReturnType<typ
 					fontWeight: 700,
 					fontSize: 88 * u,
 					lineHeight: 1.1,
-					color: C.gold500,
+					color: P.accent,
 					opacity: 1 - out,
 					transform: `translateY(${-out * 12 * u}px)`,
 					whiteSpace: 'pre',
-					textShadow: `0 0 ${24 * u}px rgba(5, 0, 30, 0.8)`,
+					textShadow: `0 0 ${24 * u}px rgba(${P.shade}, 0.8)`,
 				}}
 			>
 				{/* Volledige naam onzichtbaar erachter: zo staat de getypte tekst al op zijn eindplek. */}
@@ -420,7 +420,7 @@ const Naam: React.FC<{frame: number; fps: number; off: number; L: ReturnType<typ
 									width: Math.max(2, 4 * u),
 									height: '0.9em',
 									marginLeft: 6 * u,
-									background: C.gold500,
+									background: P.accent,
 									verticalAlign: '-0.08em',
 								}}
 							/>
