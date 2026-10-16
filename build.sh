@@ -135,13 +135,16 @@ fi
 # vastgehouden (geluid wordt nooit afgekapt); daarna alles op hele frames.
 # bron_start_seconden: zoveel stilte aan het begin van de bron wordt overgeslagen (0 = niets).
 TRIM=$(cfg "c.bron_start_seconden||0")
+# bron_voorloop_seconden: houd het eerste beeld zo lang vast (met stilte) als iemand direct begint
+# te praten, zodat het eerste woord niet in de overgang vanuit de intro valt. Hele frames.
+LEAD_FR=$(fr "$(cfg "c.bron_voorloop_seconden||0")"); LEAD=$(sec "$LEAD_FR")
 V_DUR=$(ffprobe -v error -select_streams v:0 -show_entries stream=duration -of default=nw=1:nk=1 "$SRC")
 A_DUR=$([[ $HAS_AUDIO == 1 ]] && ffprobe -v error -select_streams a:0 -show_entries stream=duration -of default=nw=1:nk=1 "$SRC" || echo 0)
-M_FR=$(node -e "process.stdout.write(String(Math.ceil((Math.max($V_DUR,$A_DUR)-$TRIM)*$FPS-1e-6)))")
+M_FR=$(node -e "process.stdout.write(String(Math.ceil((Math.max($V_DUR,$A_DUR)-$TRIM)*$FPS-1e-6)+$LEAD_FR))")
 M_DUR=$(sec "$M_FR")
 if [[ $HAS_AUDIO == 1 ]]; then MA=(-map 0:a:0); else MA=(-map 1:a); fi
 # Watermerk: klein, half-transparant logo over de voorstelvideo (binnen de veilige marge).
-WM_LOGO=$(cfg "c.watermerk&&c.watermerk.logo"); WM_IN=(); VFILT="[0:v]fps=${FPS},${SCALE},tpad=stop_mode=clone:stop_duration=5,trim=end_frame=${M_FR}"
+WM_LOGO=$(cfg "c.watermerk&&c.watermerk.logo"); WM_IN=(); VFILT="[0:v]fps=${FPS},${SCALE},tpad=start_mode=clone:start_duration=${LEAD}:stop_mode=clone:stop_duration=5,trim=end_frame=${M_FR}"
 if [[ -n "$WM_LOGO" && -f "$WM_LOGO" ]]; then
   WM_W=$(node -e "process.stdout.write(String(Math.round(${W}*$(cfg c.watermerk.breedte_procent)/100/2)*2))")
   WM_A=$(cfg c.watermerk.zichtbaarheid)
@@ -159,7 +162,7 @@ if [[ -n "$WM_LOGO" && -f "$WM_LOGO" ]]; then
 fi
 ffmpeg -v error -y -ss "$TRIM" -i "$SRC" -f lavfi -i anullsrc=r=48000:cl=stereo "${WM_IN[@]}" \
   -filter_complex "${VFILT}[mv]" -map "[mv]" "${MA[@]}" \
-  -af "aresample=48000,apad,atrim=0:${M_DUR}" \
+  -af "aresample=48000,adelay=delays=$(node -e "process.stdout.write(String(Math.round($LEAD*1000)))"):all=1,apad,atrim=0:${M_DUR}" \
   -frames:v "$M_FR" "${VENC[@]}" "${AENC[@]}" "$BUILD/n_video.mp4"
 
 # Intro, outro, CTA: stilte of muziek (fade in/uit 0,8 s).
