@@ -1,0 +1,66 @@
+{
+  "_uitleg": "Vul hier de teksten in. Alles tussen [HAKEN] moet nog ingevuld worden. Claude Code stopt en vraagt ernaar als er nog haken in staan.",
+  "_uitleg_volgorde": "Begin van de lijst: \"foto\" (intro opent met een stilstaand beeld uit de video), \"teaser\" (kort fragment vóór de intro) of geen van beide.",
+  "thema": "yftl",
+  "_uitleg_thema": "Kleuren per categorie: \"topvrouw\" (donker: navy met goud) of \"yftl\" (Young Female Talent: goud met navy).",
+  "volgorde": [
+    "foto",
+    "intro",
+    "video",
+    "outro",
+    "cta"
+  ],
+  "bronvideo": "input/vera-tongos.mov",
+  "bron_start_seconden": 0,
+  "_uitleg_bron_start": "Zoveel seconden stilte aan het begin van de bronvideo wordt weggeknipt (0 = niets).",
+  "bron_voorloop_seconden": 0.45,
+  "_uitleg_voorloop": "Houdt het eerste beeld zo lang vast (met stilte) als iemand meteen begint te praten, zodat het eerste woord niet in de overgang valt (0 = niets).",
+  "output": "output/vera-tongos-yftl-limburg.mp4",
+  "persoon": {
+    "naam": "Vera Tongos",
+    "categorie": "Young Female Talent"
+  },
+  "teaser": {
+    "start": "00:00:00.4",
+    "duur_seconden": 3.3,
+    "_uitleg": "Kort fragment uit de video waarin je de persoon al ziet, vóór de intro. start = tijdstip in de bronvideo, bijv. \"00:01:12.5\". Laat je hem op null staan, dan stelt Claude Code zelf 3 fragmenten voor en vraagt welke je wilt."
+  },
+  "foto": {
+    "tijdstip": "00:00:00.70",
+    "oogcontact_seconden": 0.6,
+    "naam_tonen": true,
+    "_uitleg": "Openingsfoto: stilstaand beeld uit de video (tijdstip). Eerst oogcontact (oogcontact_seconden), daarna zakt de foto weg naar de achtergrond en speelt de intro eroverheen. naam_tonen: de naam wordt ingetypt."
+  },
+  "intro": {
+    "duur_seconden": 6,
+    "eyebrow": "Verkiezing 2026",
+    "titel": "Finalist Young Female Talent Limburg"
+  },
+  "outro": {
+    "duur_seconden": 4,
+    "eyebrow": "Finalist Young Female Talent Limburg 2026",
+    "payoff": "Versterken & Inspireren"
+  },
+  "cta": {
+    "duur_seconden": 7,
+    "eyebrow_datum_locatie": "5 november 2026 · Studio Radium",
+    "kop": "Hier moet je bij zijn",
+    "knop": "Koop hier je tickets",
+    "url": "https://www.eventbrite.nl/e/verkiezingsavond-topvrouw-limburg-2026-tickets-1998947892958?keep_tld=true",
+    "url_weergave": "Tickets via eventbrite.nl",
+    "_uitleg_url": "url = de echte ticketlink. url_weergave = wat in beeld staat (een lange link is in een video niet leesbaar). Heb je een korte link, zet die dan in url_weergave.",
+    "socials": "@topvrouwenlimburg"
+  },
+  "watermerk": {
+    "logo": "assets/logo-fc-wit.png",
+    "positie": "linksboven",
+    "breedte_procent": 16,
+    "zichtbaarheid": 0.7,
+    "_uitleg": "Klein logo over de voorstelvideo. positie: linksboven, rechtsboven, linksonder of rechtsonder. breedte_procent = % van de beeldbreedte, zichtbaarheid 0..1. Zet logo op null om het uit te zetten."
+  },
+  "audio": {
+    "muziek_intro_outro": null,
+    "_uitleg_muziek": "Optioneel: pad naar een rechtenvrij muziekbestand, bijv. 'input/muziek.mp3'. Wordt gebruikt onder intro, outro en CTA. null = stilte. Het geluid van de bronvideo blijft altijd onaangetast."
+  },
+  "resolutie": "1080x1920"
+}
