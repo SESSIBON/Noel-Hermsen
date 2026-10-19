@@ -164,8 +164,12 @@ if [[ -n "$WM_LOGO" && -f "$WM_LOGO" ]]; then
 fi
 ffmpeg -v error -y -ss "$TRIM" -i "$SRC" -f lavfi -i anullsrc=r=48000:cl=stereo "${WM_IN[@]}" \
   -filter_complex "${VFILT}[mv]" -map "[mv]" "${MA[@]}" \
-  -af "aresample=48000,adelay=delays=$(node -e "process.stdout.write(String(Math.round($LEAD*1000)))"):all=1,apad,atrim=0:${M_DUR}" \
+  -af "aresample=48000,asetpts=N/SR/TB,adelay=delays=$(node -e "process.stdout.write(String(Math.round($LEAD*1000)))"):all=1,asetpts=N/SR/TB,apad,atrim=0:${M_DUR}" \
   -frames:v "$M_FR" "${VENC[@]}" "${AENC[@]}" "$BUILD/n_video.mp4"
+# Controle beeld/geluid: het geluid moet echt (in samples) even lang zijn als het beeld,
+# anders schuift het bij het samenvoegen ten opzichte van de lippen.
+A_REAL=$(ffmpeg -v error -i "$BUILD/n_video.mp4" -map 0:a -f s16le -ac 1 -ar 48000 - | wc -c)
+node -e "const d=$A_REAL/2/48000-$M_DUR; if(Math.abs(d)>0.03){console.error('Geluid van de video wijkt '+d.toFixed(3)+' s af van het beeld; build gestopt.');process.exit(1)}"
 
 # Intro, outro, CTA: stilte of muziek (fade in/uit 0,8 s).
 for part in intro outro cta; do
