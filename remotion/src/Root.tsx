@@ -3,10 +3,13 @@ import {Composition} from 'remotion';
 import {Intro} from './Intro';
 import {Outro} from './Outro';
 import {Cta} from './Cta';
+import {Overgang} from './Overgang';
 import {RES_H, RES_W, config, defaultAssetProps} from './theme';
 
 // fps komt van de bronvideo (build.sh geeft hem mee met --props); 25 is de terugvaloptie.
 const FPS_FALLBACK = 25;
+// Duur van de korte motion tussen quotes (config.overgangen.duur_seconden).
+const OVERGANG_DUUR = (config as {overgangen?: {duur_seconden?: number}}).overgangen?.duur_seconden ?? 1.2;
 
 export const Root: React.FC = () => {
 	const frames = (s: number, fps: number) => Math.round(s * fps);
@@ -34,6 +37,16 @@ export const Root: React.FC = () => {
 					const extra = props.foto ? config.foto.oogcontact_seconden : 0;
 					return {fps, durationInFrames: frames(config.intro.duur_seconden + extra, fps)};
 				}}
+			/>
+			<Composition
+				id="Overgang"
+				component={Overgang}
+				width={RES_W}
+				height={RES_H}
+				fps={FPS_FALLBACK}
+				durationInFrames={frames(OVERGANG_DUUR, FPS_FALLBACK)}
+				defaultProps={{beeldmerk: defaultAssetProps.beeldmerk, fps: FPS_FALLBACK}}
+				calculateMetadata={meta(OVERGANG_DUUR)}
 			/>
 			<Composition
 				id="Outro"

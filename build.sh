@@ -57,6 +57,11 @@ FPS=$(node -e "const[a,b]='$FPS_RAW'.split('/').map(Number);process.stdout.write
 SRC_RANGE=$(probe v:0 color_range)
 HAS_AUDIO=$([[ -n "$(probe a:0 codec_type)" ]] && echo 1 || echo 0)
 if [[ -n "$RES" ]]; then W=${RES%x*}; H=${RES#*x}; else W=$SRC_W; H=$SRC_H; fi
+# bron_crop: deel van het bronbeeld dat gebruikt wordt (ffmpeg crop w:h:x:y), bijv. als een export
+# zwarte balken heeft. Leeg = hele beeld.
+BRON_CROP=$(cfg "c.bron_crop||''"); CROPF=""; [[ -n "$BRON_CROP" ]] && CROPF="crop=${BRON_CROP},"
+SLIDE=$([[ "$(cfg "c.outro&&c.outro.stijl")" == slide ]] && echo 1 || echo 0)
+INTRO_OVER=$(cfg "c.intro&&c.intro.audio_uit_bron?1:0")
 echo "Bron: ${SRC_W}x${SRC_H} @ ${FPS} fps, audio: $HAS_AUDIO, range: ${SRC_RANGE:-tv}  ->  render ${W}x${H}"
 
 # Seconden <-> frames (alles op hele frames, zodat beeld en geluid niet uit elkaar lopen).
@@ -91,12 +96,15 @@ if [[ "$BM" == null || "$LOGO" == null ]]; then
 fi
 FOTO_PROP=$([[ $USE_FOTO == 1 ]] && echo true || echo false)
 PROPS="{\"beeldmerk\":$BM,\"logoFc\":$LOGO,\"fps\":$FPS,\"foto\":$FOTO_PROP}"
-COMPS=(Intro Outro Cta)
+COMPS=(Intro Outro Cta); [[ $SLIDE == 1 ]] && COMPS=(Intro Cta)
+# Korte motions tussen de quotes (config.overgangen.tijdstippen, in seconden van de bron).
+OV_TIJDEN=$(cfg "(c.overgangen&&c.overgangen.tijdstippen||[]).join(' ')")
+OV_DUR=$(cfg "c.overgangen&&c.overgangen.duur_seconden||1.2")
 if [[ $USE_FOTO == 1 ]]; then
   [[ -n "$FOTO_T" ]] || { echo "foto.tijdstip ontbreekt in $CONFIG"; exit 1; }
   # "Screenshot" uit de bronvideo, beeldvullend op de eindmaat.
   ffmpeg -v error -y -ss "$(tosec "$FOTO_T")" -i "$SRC" -frames:v 1 \
-    -vf "scale=${W}:${H}:force_original_aspect_ratio=increase:flags=lanczos:in_range=${SRC_RANGE:-tv},crop=${W}:${H}" \
+    -vf "${CROPF}scale=${W}:${H}:force_original_aspect_ratio=increase:flags=lanczos:in_range=${SRC_RANGE:-tv},crop=${W}:${H}" \
     remotion/public/foto.png
 fi
 
@@ -113,13 +121,18 @@ fi
     npx remotion render src/index.ts "$comp" "../$BUILD/$lc.mp4" --codec=h264 \
       --props="$PROPS" --log=error "${BROWSER[@]}"
   done
+  if [[ -n "$OV_TIJDEN" ]]; then
+    # Met alfakanaal, zodat hij over de video gelegd kan worden.
+    npx remotion render src/index.ts Overgang "../$BUILD/overgang.mov" --codec=prores --prores-profile=4444 \
+      --pixel-format=yuva444p10le --image-format=png --props="$PROPS" --log=error "${BROWSER[@]}"
+  fi
 )
 
 # --- Stap 2: ffmpeg ------------------------------------------------------------------
 VENC=(-c:v libx264 -preset medium -crf 18 -pix_fmt yuv420p -r "$FPS"
       -color_primaries bt709 -color_trc bt709 -colorspace bt709 -color_range tv)
 AENC=(-c:a aac -b:a 192k -ar 48000 -ac 2)
-SCALE="scale=${W}:${H}:force_original_aspect_ratio=decrease:flags=lanczos:in_range=${SRC_RANGE:-tv}:out_range=tv,pad=${W}:${H}:(ow-iw)/2:(oh-ih)/2:color=0x05001e,setsar=1"
+SCALE="${CROPF}scale=${W}:${H}:force_original_aspect_ratio=decrease:flags=lanczos:in_range=${SRC_RANGE:-tv}:out_range=tv,pad=${W}:${H}:(ow-iw)/2:(oh-ih)/2:color=0x05001e,setsar=1"
 
 if [[ $USE_TEASER == 1 ]]; then
 # Teaser: opnieuw encoderen (exact beginframe), heel licht inzoomen 1 -> 1,03, audio 0,4 s fade-out.
@@ -137,11 +150,19 @@ fi
 # vastgehouden (geluid wordt nooit afgekapt); daarna alles op hele frames.
 # bron_start_seconden: zoveel stilte aan het begin van de bron wordt overgeslagen (0 = niets).
 TRIM=$(cfg "c.bron_start_seconden||0")
+# intro.audio_uit_bron: de intro ligt óver het begin van de video en het geluid van de bron loopt
+# gewoon door. De video begint dan waar de overgang uit de intro start.
+if [[ $INTRO_OVER == 1 ]]; then
+  TRIM=$(node -e "process.stdout.write(String(Math.round($INTRO_DUR*$FPS)/$FPS - Math.round(0.6*$FPS)/$FPS))")
+fi
 # bron_voorloop_seconden: houd het eerste beeld zo lang vast (met stilte) als iemand direct begint
 # te praten, zodat het eerste woord niet in de overgang vanuit de intro valt. Hele frames.
 LEAD_FR=$(fr "$(cfg "c.bron_voorloop_seconden||0")"); LEAD=$(sec "$LEAD_FR")
 V_DUR=$(ffprobe -v error -select_streams v:0 -show_entries stream=duration -of default=nw=1:nk=1 "$SRC")
 A_DUR=$([[ $HAS_AUDIO == 1 ]] && ffprobe -v error -select_streams a:0 -show_entries stream=duration -of default=nw=1:nk=1 "$SRC" || echo 0)
+# bron_eind_seconden: stop de bronvideo hier (bijv. vóór een eigen fade naar zwart).
+BRON_EIND=$(cfg "c.bron_eind_seconden||''")
+if [[ -n "$BRON_EIND" ]]; then V_DUR=$BRON_EIND; A_DUR=$BRON_EIND; fi
 M_FR=$(node -e "process.stdout.write(String(Math.ceil((Math.max($V_DUR,$A_DUR)-$TRIM)*$FPS-1e-6)+$LEAD_FR))")
 M_DUR=$(sec "$M_FR")
 if [[ $HAS_AUDIO == 1 ]]; then MA=(-map 0:a:0); else MA=(-map 1:a); fi
@@ -162,7 +183,19 @@ if [[ -n "$WM_LOGO" && -f "$WM_LOGO" ]]; then
   WM_IN=(-i "$WM_LOGO")
   VFILT+="[base];[2:v]scale=${WM_W}:-1:flags=lanczos,format=rgba,colorchannelmixer=aa=${WM_A}[wm];[base][wm]overlay=${WX}:${WY}:format=auto"
 fi
-ffmpeg -v error -y -ss "$TRIM" -i "$SRC" -f lavfi -i anullsrc=r=48000:cl=stereo "${WM_IN[@]}" \
+OV_IN=()
+if [[ -n "$OV_TIJDEN" ]]; then
+  K=$((2 + ${#WM_IN[@]} / 2)); VFILT+="[ov0]"; N_OV=0
+  for ts in $OV_TIJDEN; do
+    # Midden van de overgang precies op de knip (tijd in de bron -> tijd in het videostuk).
+    ST=$(node -e "process.stdout.write(String(Math.max(0,$ts-$TRIM+$LEAD-$OV_DUR/2)))")
+    OV_IN+=(-i "$BUILD/overgang.mov")
+    VFILT+=";[$K:v]setpts=PTS-STARTPTS+${ST}/TB[o$K];[ov$N_OV][o$K]overlay=eof_action=pass:format=auto[ov$((N_OV+1))]"
+    K=$((K+1)); N_OV=$((N_OV+1))
+  done
+  VFILT+=";[ov$N_OV]null"
+fi
+ffmpeg -v error -y -ss "$TRIM" -i "$SRC" -f lavfi -i anullsrc=r=48000:cl=stereo "${WM_IN[@]}" "${OV_IN[@]}" \
   -filter_complex "${VFILT}[mv]" -map "[mv]" "${MA[@]}" \
   -af "aresample=48000,asetpts=N/SR/TB,adelay=delays=$(node -e "process.stdout.write(String(Math.round($LEAD*1000)))"):all=1,asetpts=N/SR/TB,apad,atrim=0:${M_DUR}" \
   -frames:v "$M_FR" "${VENC[@]}" "${AENC[@]}" "$BUILD/n_video.mp4"
@@ -171,11 +204,27 @@ ffmpeg -v error -y -ss "$TRIM" -i "$SRC" -f lavfi -i anullsrc=r=48000:cl=stereo 
 A_REAL=$(ffmpeg -v error -i "$BUILD/n_video.mp4" -map 0:a -f s16le -ac 1 -ar 48000 - | wc -c)
 node -e "const d=$A_REAL/2/48000-$M_DUR; if(Math.abs(d)>0.03){console.error('Geluid van de video wijkt '+d.toFixed(3)+' s af van het beeld; build gestopt.');process.exit(1)}"
 
+# outro.stijl "slide": de slide schuift over het laatste beeld van de video; dat beeld eerst opslaan.
+if [[ $SLIDE == 1 ]]; then
+  ffmpeg -v error -y -sseof -0.2 -i "$BUILD/n_video.mp4" -update 1 -q:v 2 remotion/public/laatste.png
+  (
+    cd remotion
+    BROWSER=()
+    for b in /opt/pw-browsers/chromium_headless_shell-*/chrome-linux/headless_shell; do
+      [[ -x "$b" ]] && BROWSER=(--browser-executable="$b") && break
+    done
+    npx remotion render src/index.ts Outro "../$BUILD/outro.mp4" --codec=h264 --props="$PROPS" --log=error "${BROWSER[@]}"
+  )
+fi
+
 # Intro, outro, CTA: stilte of muziek (fade in/uit 0,8 s).
 for part in intro outro cta; do
   case $part in intro) D=$INTRO_DUR;; outro) D=$OUTRO_DUR;; cta) D=$CTA_DUR;; esac
   P_FR=$(fr "$D"); P_DUR=$(sec "$P_FR")
-  if [[ -n "$MUZIEK" ]]; then
+  if [[ $part == intro && $INTRO_OVER == 1 ]]; then
+    AIN=(-i "$SRC")
+    AF="aresample=48000,asetpts=N/SR/TB,atrim=0:${P_DUR},apad,atrim=0:${P_DUR}"
+  elif [[ -n "$MUZIEK" ]]; then
     AIN=(-stream_loop -1 -i "$MUZIEK")
     AF="atrim=0:${P_DUR},afade=t=in:d=0.8,afade=t=out:st=$(node -e "process.stdout.write(String($P_DUR-0.8))"):d=0.8"
   else
@@ -190,7 +239,10 @@ done
 # Samenvoegen. Overgangen op hele frames; audio telkens mee met acrossfade van dezelfde duur.
 #   teaser -> intro: fadeblack 0,5 s | intro -> video: fade 0,6 s | video -> outro: fadeblack 0,8 s
 #   outro -> CTA: gewone concat (de achtergrond loopt in Remotion door).
-X1=$(sec "$(fr 0.5)"); X2=$(sec "$(fr 0.6)"); X3=$(sec "$(fr 0.8)")
+X1=$(sec "$(fr 0.5)"); X2=$(sec "$(fr 0.6)"); X3=$(sec "$(fr 0.8)"); T3=fadeblack
+# Bij een slide is de overgang video -> slide een harde knip (één frame): de slide begint op
+# het laatste beeld van de video en schuift daaroverheen.
+[[ $SLIDE == 1 ]] && { X3=$(sec 1); T3=fade; }
 ID=$(sec "$(fr "$INTRO_DUR")"); OD=$(sec "$(fr "$OUTRO_DUR")"); CD=$(sec "$(fr "$CTA_DUR")")
 off() { node -e "process.stdout.write(String(Math.round(($1)*1e6)/1e6))"; }
 
@@ -211,7 +263,7 @@ O2=$(off "$HEAD-$X2")
 O3=$(off "$HEAD+$M_DUR-$X2-$X3")
 EXPECT=$(off "$HEAD+$M_DUR+$OD+$CD-$X2-$X3")
 VF+="[vi][$N:v]xfade=transition=fade:duration=${X2}:offset=${O2}[v2];"
-VF+="[v2][$((N+1)):v]xfade=transition=fadeblack:duration=${X3}:offset=${O3}[v3];"
+VF+="[v2][$((N+1)):v]xfade=transition=${T3}:duration=${X3}:offset=${O3}[v3];"
 VF+="[v3][$((N+2)):v]concat=n=2:v=1:a=0,format=yuv420p[v];"
 AF+="[ai][$N:a]acrossfade=d=${X2}:c1=tri:c2=tri[a2];"
 AF+="[a2][$((N+1)):a]acrossfade=d=${X3}:c1=tri:c2=tri[a3];"

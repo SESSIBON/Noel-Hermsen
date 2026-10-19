@@ -14,7 +14,25 @@ import {BEELDMERK, FONT, LOGO_FC, P, config, progress, type AssetProps} from './
 // Met een openingsfoto (config.foto) begint het met oogcontact: eerst even haar foto, met de
 // naam die wordt ingetypt; daarna zakt de foto rustig weg naar de achtergrond (gedimd en zacht)
 // en speelt de diamant-animatie eroverheen.
-const T = {
+// intro.stijl "vlieg": de diamant komt draaiend binnenvliegen met een gouden spoor en landt
+// in het midden; daarna dezelfde flits, vonkjes en logo-onthulling (iets later in de tijd).
+const VLIEG = (config.intro as {stijl?: string}).stijl === 'vlieg';
+const FLY_END = 1.5;
+const T = VLIEG
+	? {
+			diamondIn: 0.0,
+			flareStart: 1.45,
+			flareEnd: 2.6,
+			dissolveStart: 2.6,
+			dissolveDur: 0.8,
+			gatherStart: 3.0,
+			burst: 3.8,
+			logoIn: 3.72,
+			logoSheen: 4.45,
+			eyebrow: 4.5,
+			title: 4.65,
+		}
+	: {
 	diamondIn: 0.0,
 	flareStart: 0.6,
 	flareEnd: 2.1,
@@ -26,7 +44,7 @@ const T = {
 	logoSheen: 3.95,
 	eyebrow: 4.0,
 	title: 4.15,
-};
+		};
 
 const clamp = {extrapolateLeft: 'clamp', extrapolateRight: 'clamp'} as const;
 
@@ -72,6 +90,31 @@ export const Intro: React.FC<AssetProps> = (assets) => {
 	const dLeft = diamond.cx - diamond.w / 2;
 	const dTop = diamond.cy - diamond.h / 2;
 
+	// Vlucht: van linksonder buiten beeld, in een boog, draaiend om de verticale as; de draai
+	// remt af en de diamant landt recht van voren op zijn plek.
+	const flyPose = (time: number) => {
+		const p = Math.min(Math.max(time / FLY_END, 0), 1);
+		const e = 1 - Math.pow(1 - p, 3);
+		const sx = -0.25 * width;
+		const sy = 1.1 * height;
+		const kx = 0.05 * width;
+		const ky = 0.15 * height;
+		const x = (1 - e) * (1 - e) * sx + 2 * (1 - e) * e * kx + e * e * diamond.cx;
+		const y = (1 - e) * (1 - e) * sy + 2 * (1 - e) * e * ky + e * e * diamond.cy;
+		return {
+			x,
+			y,
+			scale: 0.18 + 0.82 * e,
+			rotY: 1080 * Math.pow(1 - e, 1.6),
+			tilt: -28 * (1 - e),
+			opacity: interpolate(time, [0, 0.25], [0, 1], clamp),
+			p,
+		};
+	};
+	const pose = VLIEG ? flyPose(t) : null;
+	const flyTransform = (q: ReturnType<typeof flyPose>) =>
+		`translate(${q.x - diamond.cx}px, ${q.y - diamond.cy}px) perspective(${1400 * u}px) rotateY(${q.rotY}deg) rotateZ(${q.tilt}deg) scale(${q.scale})`;
+
 	// Lichtflits: van links naar rechts over de gordel van de diamant, piek in het midden.
 	const flareP = interpolate(t, [T.flareStart, T.flareEnd], [0, 1], {...clamp, easing: Easing.inOut(Easing.sin)});
 	const flareI = Math.sin(Math.PI * flareP);
@@ -108,15 +151,17 @@ export const Intro: React.FC<AssetProps> = (assets) => {
 							width: diamond.w * 2,
 							height: diamond.w * 2,
 							background: `radial-gradient(circle, rgba(${P.fxMid}, ${0.22 * glow}) 0%, rgba(${P.fxMid}, 0) 55%)`,
-							opacity: dIn * (1 - progress(f, fps, T.dissolveStart, 1.2)),
+							opacity: dIn * (pose ? Math.pow(pose.p, 3) : 1) * (1 - progress(f, fps, T.dissolveStart, 1.2)),
 						}}
 					/>
+					{pose && pose.p < 1 ? <FlyTrail pose={flyPose} t={t} box={diamond} u={u} toTransform={flyTransform} /> : null}
 					<Img
 						src={staticFile(BEELDMERK)}
 						style={{
 							...boxStyle(diamond),
 							objectFit: 'contain',
-							opacity: dIn,
+							opacity: pose ? pose.opacity : dIn,
+							transform: pose ? flyTransform(pose) : undefined,
 							filter: `drop-shadow(0 0 ${6 * u}px rgba(${P.fxHi}, ${0.9 * glow})) drop-shadow(0 0 ${22 * u}px rgba(${P.fxMid}, ${0.7 * glow}))`,
 							WebkitMaskImage: mask,
 							maskImage: mask,
@@ -229,7 +274,7 @@ const Twinkles: React.FC<{diamond: Box; t: number; u: number}> = ({diamond, t, u
 			const r = 0.45 + random(`tw-r-${i}`) * 0.35;
 			const x = diamond.cx + Math.cos(a + t * 0.12) * diamond.w * r;
 			const y = diamond.cy + Math.sin(a + t * 0.12) * diamond.h * r * 1.1 - t * 6 * u;
-			const born = 0.3 + random(`tw-b-${i}`) * 1.6;
+			const born = (VLIEG ? FLY_END - 0.2 : 0.3) + random(`tw-b-${i}`) * (VLIEG ? 0.9 : 1.6);
 			const life = interpolate(t, [born, born + 0.4, 3.0, 3.6], [0, 1, 1, 0], clamp);
 			const blink = 0.5 + 0.5 * Math.sin(t * (3 + random(`tw-f-${i}`) * 4) + i);
 			const size = (3 + random(`tw-s-${i}`) * 6) * u;
@@ -431,3 +476,52 @@ const Naam: React.FC<{frame: number; fps: number; off: number; L: ReturnType<typ
 		</>
 	);
 };
+
+// Gouden spoor achter de vliegende diamant: naglans-kopieën van de PNG en vonkjes die
+// langs de baan achterblijven en langzaam uitdoven.
+const TRAIL_COPIES = 12;
+const TRAIL_SPARKS = 90;
+type Pose = {x: number; y: number; scale: number; rotY: number; tilt: number; opacity: number; p: number};
+const FlyTrail: React.FC<{
+	pose: (time: number) => Pose;
+	t: number;
+	box: Box;
+	u: number;
+	toTransform: (q: Pose) => string;
+}> = ({pose, t, box, u, toTransform}) => (
+	<>
+		{new Array(TRAIL_COPIES).fill(0).map((_, i) => {
+			const k = TRAIL_COPIES - i;
+			const q = pose(t - k * 0.03);
+			if (t - k * 0.03 <= 0) return null;
+			const fall = 1 - k / (TRAIL_COPIES + 1);
+			return (
+				<Img
+					key={`c${k}`}
+					src={staticFile(BEELDMERK)}
+					style={{
+						...boxStyle(box),
+						objectFit: 'contain',
+						opacity: q.opacity * 0.22 * fall * (1 - q.p * 0.6),
+						transform: toTransform(q),
+						filter: `blur(${(1 - fall) * 6 * u}px)`,
+					}}
+				/>
+			);
+		})}
+		{new Array(TRAIL_SPARKS).fill(0).map((_, i) => {
+			const born = 0.05 + random(`ft-b-${i}`) * (FLY_END - 0.1);
+			const age = t - born;
+			const life = 0.6 + random(`ft-l-${i}`) * 0.6;
+			if (age < 0 || age > life) return null;
+			const q = pose(born);
+			const jx = (random(`ft-x-${i}`) - 0.5) * box.w * 0.5 * q.scale;
+			const jy = (random(`ft-y-${i}`) - 0.5) * box.h * 0.5 * q.scale;
+			const x = q.x + jx + (random(`ft-dx-${i}`) - 0.5) * 60 * u * age;
+			const y = q.y + jy + 50 * u * age;
+			const opacity = interpolate(age, [0, 0.08, life], [0, 1, 0], clamp);
+			const size = (3 + random(`ft-s-${i}`) * 6) * u;
+			return <Dot key={`s${i}`} x={x} y={y} size={size} opacity={opacity} u={u} />;
+		})}
+	</>
+);
