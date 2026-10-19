@@ -4,8 +4,7 @@
   "volgorde": [
     "intro",
     "video",
-    "outro",
-    "cta"
+    "outro"
   ],
   "bronvideo": "input/inge-murrer-quotes.mp4",
   "output": "output/inge-murrer-quotes-topvrouwen-limburg.mp4",
@@ -23,7 +22,7 @@
     "_uitleg": "stijl vlieg: draaiende diamant vliegt in met een goudspoor. audio_uit_bron: de intro ligt over het begin van de video; het geluid loopt door."
   },
   "outro": {
-    "duur_seconden": 4.5,
+    "duur_seconden": 5.0,
     "eyebrow": "Finalist Topvrouw Limburg 2026",
     "payoff": "Versterken & Inspireren",
     "stijl": "slide"

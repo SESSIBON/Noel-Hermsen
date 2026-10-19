@@ -96,7 +96,11 @@ if [[ "$BM" == null || "$LOGO" == null ]]; then
 fi
 FOTO_PROP=$([[ $USE_FOTO == 1 ]] && echo true || echo false)
 PROPS="{\"beeldmerk\":$BM,\"logoFc\":$LOGO,\"fps\":$FPS,\"foto\":$FOTO_PROP}"
-COMPS=(Intro Outro Cta); [[ $SLIDE == 1 ]] && COMPS=(Intro Cta)
+# Zonder "cta" in config.volgorde (bijv. voor de awardavond zelf) eindigt de video na de outro.
+USE_CTA=$(cfg "c.volgorde.includes('cta')?1:0")
+COMPS=(Intro Outro); [[ $SLIDE == 1 ]] && COMPS=(Intro)
+[[ $USE_CTA == 1 ]] && COMPS+=(Cta)
+PARTS=(intro outro); [[ $USE_CTA == 1 ]] && PARTS+=(cta)
 # Korte motions tussen de quotes (config.overgangen.tijdstippen, in seconden van de bron).
 OV_TIJDEN=$(cfg "(c.overgangen&&c.overgangen.tijdstippen||[]).join(' ')")
 OV_DUR=$(cfg "c.overgangen&&c.overgangen.duur_seconden||1.2")
@@ -218,7 +222,7 @@ if [[ $SLIDE == 1 ]]; then
 fi
 
 # Intro, outro, CTA: stilte of muziek (fade in/uit 0,8 s).
-for part in intro outro cta; do
+for part in "${PARTS[@]}"; do
   case $part in intro) D=$INTRO_DUR;; outro) D=$OUTRO_DUR;; cta) D=$CTA_DUR;; esac
   P_FR=$(fr "$D"); P_DUR=$(sec "$P_FR")
   if [[ $part == intro && $INTRO_OVER == 1 ]]; then
@@ -258,16 +262,25 @@ else
   VF+="[0:v]null[vi];"; AF+="[0:a]anull[ai];"
   HEAD=$ID; N=1
 fi
-INPUTS+=(-i "$BUILD/n_video.mp4" -i "$BUILD/n_outro.mp4" -i "$BUILD/n_cta.mp4")
+INPUTS+=(-i "$BUILD/n_video.mp4" -i "$BUILD/n_outro.mp4")
+[[ $USE_CTA == 1 ]] && INPUTS+=(-i "$BUILD/n_cta.mp4") || CD=0
 O2=$(off "$HEAD-$X2")
 O3=$(off "$HEAD+$M_DUR-$X2-$X3")
 EXPECT=$(off "$HEAD+$M_DUR+$OD+$CD-$X2-$X3")
 VF+="[vi][$N:v]xfade=transition=fade:duration=${X2}:offset=${O2}[v2];"
 VF+="[v2][$((N+1)):v]xfade=transition=${T3}:duration=${X3}:offset=${O3}[v3];"
-VF+="[v3][$((N+2)):v]concat=n=2:v=1:a=0,format=yuv420p[v];"
+if [[ $USE_CTA == 1 ]]; then
+  VF+="[v3][$((N+2)):v]concat=n=2:v=1:a=0,format=yuv420p[v];"
+else
+  VF+="[v3]format=yuv420p[v];"
+fi
 AF+="[ai][$N:a]acrossfade=d=${X2}:c1=tri:c2=tri[a2];"
 AF+="[a2][$((N+1)):a]acrossfade=d=${X3}:c1=tri:c2=tri[a3];"
-AF+="[a3][$((N+2)):a]concat=n=2:v=0:a=1,apad,atrim=0:${EXPECT}[a]"
+if [[ $USE_CTA == 1 ]]; then
+  AF+="[a3][$((N+2)):a]concat=n=2:v=0:a=1,apad,atrim=0:${EXPECT}[a]"
+else
+  AF+="[a3]apad,atrim=0:${EXPECT}[a]"
+fi
 
 ffmpeg -v error -y "${INPUTS[@]}" -filter_complex "${VF}${AF}" \
   -map "[v]" -map "[a]" "${VENC[@]}" "${AENC[@]}" -movflags +faststart "$OUT"

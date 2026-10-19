@@ -8,6 +8,8 @@ import {EASE, FONT, LOGO_FC, P, config, progress, type AssetProps} from './theme
 // (laatste.png, door build.sh gemaakt) en daarop komen eyebrow, naam, functie en logo.
 const SLIDE = (config.outro as {stijl?: string}).stijl === 'slide';
 const FUNCTIE = (config.persoon as {functie?: string}).functie;
+// Zonder CTA erna (bijv. op de awardavond) blijft alles staan en fadet het geheel aan het eind naar navy.
+const MET_CTA = (config.volgorde as string[]).includes('cta');
 
 export const Outro: React.FC<AssetProps> = (assets) => {
 	const frame = useCurrentFrame();
@@ -23,8 +25,9 @@ export const Outro: React.FC<AssetProps> = (assets) => {
 	const functieP = progress(frame, fps, 0.85 + d, 0.7);
 	const logoP = progress(frame, fps, 1.4 + d, 0.7);
 	// Laatste 0,5 s: tekst fadet uit, het logo schuift door naar zijn plek in de CTA.
-	const out = progress(frame, fps, end - 0.5, 0.5);
+	const out = MET_CTA ? progress(frame, fps, end - 0.5, 0.5) : 0;
 	const keep = 1 - out;
+	const slot = MET_CTA ? 0 : progress(frame, fps, end - 0.7, 0.7);
 
 	const from = outroLogoBox(L, assets);
 	const to = ctaLogoBox(L, assets);
@@ -127,6 +130,7 @@ export const Outro: React.FC<AssetProps> = (assets) => {
 			>
 				{config.outro.payoff}
 			</div>
+			{slot > 0 ? <AbsoluteFill style={{background: P.end, opacity: slot}} /> : null}
 		</AbsoluteFill>
 	);
 };
