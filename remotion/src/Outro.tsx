@@ -40,7 +40,7 @@ export const Outro: React.FC<AssetProps> = (assets) => {
 		<AbsoluteFill>
 			{SLIDE ? (
 				<>
-					<Img src={staticFile('laatste.png')} style={{width: '100%', height: '100%', objectFit: 'cover'}} />
+					{assets.transparant ? null : <Img src={staticFile('laatste.png')} style={{width: '100%', height: '100%', objectFit: 'cover'}} />}
 					<AbsoluteFill style={{transform: `translateX(${(1 - slideP) * 100}%)`}}>
 						<Background />
 						{/* gouden rand aan de voorkant van het paneel tijdens het schuiven */}

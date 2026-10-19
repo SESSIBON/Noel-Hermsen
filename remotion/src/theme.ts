@@ -46,6 +46,8 @@ export type AssetProps = {
 	fps?: number;
 	// true = de intro opent met de openingsfoto (config.foto) als achtergrond.
 	foto?: boolean;
+	// true = outro-slide zonder laatste.png eronder (transparant), voor losse export.
+	transparant?: boolean;
 };
 
 export const defaultAssetProps: AssetProps = {

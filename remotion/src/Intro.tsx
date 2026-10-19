@@ -124,7 +124,11 @@ export const Intro: React.FC<AssetProps> = (assets) => {
 	// Uiteenvallen: een zachte veeg van links naar rechts; wat weg is, wordt vonkjes.
 	const wipe = interpolate(t, [T.dissolveStart, T.dissolveStart + T.dissolveDur], [-0.15, 1.15], clamp);
 	const glow = 0.35 + 0.65 * flareI;
-	const mask = `linear-gradient(to right, transparent ${(wipe - 0.08) * 100}%, black ${(wipe + 0.08) * 100}%)`;
+	// Masker in coördinaten van het ruimere kader (pad aan elke kant van de diamant).
+	const pad = 0.3 * diamond.w;
+	const toWrap = (x: number) => ((pad + x * diamond.w) / (diamond.w + 2 * pad)) * 100;
+	const dissolving = t >= T.dissolveStart;
+	const mask = `linear-gradient(to right, transparent ${toWrap(wipe - 0.08)}%, black ${toWrap(wipe + 0.08)}%)`;
 
 	// Logo komt uit de flits: van groot, wazig en gloeiend naar scherp op zijn plek.
 	const logoP = progress(f, fps, T.logoIn, 0.7);
@@ -155,18 +159,29 @@ export const Intro: React.FC<AssetProps> = (assets) => {
 						}}
 					/>
 					{pose && pose.p < 1 ? <FlyTrail pose={flyPose} t={t} box={diamond} u={u} toTransform={flyTransform} /> : null}
-					<Img
-						src={staticFile(BEELDMERK)}
+					{/* Het masker (uiteenvallen) zit op een ruimer kader dan de PNG, zodat de gloed eromheen
+					    niet op de rand van het plaatje wordt afgekapt; buiten het uiteenvallen geen masker. */}
+					<div
 						style={{
-							...boxStyle(diamond),
-							objectFit: 'contain',
+							...boxStyle({...diamond, w: diamond.w + 2 * pad, h: diamond.h + 2 * pad}),
 							opacity: pose ? pose.opacity : dIn,
 							transform: pose ? flyTransform(pose) : undefined,
-							filter: `drop-shadow(0 0 ${6 * u}px rgba(${P.fxHi}, ${0.9 * glow})) drop-shadow(0 0 ${22 * u}px rgba(${P.fxMid}, ${0.7 * glow}))`,
-							WebkitMaskImage: mask,
-							maskImage: mask,
+							...(dissolving ? {WebkitMaskImage: mask, maskImage: mask} : {}),
 						}}
-					/>
+					>
+						<Img
+							src={staticFile(BEELDMERK)}
+							style={{
+								position: 'absolute',
+								left: pad,
+								top: pad,
+								width: diamond.w,
+								height: diamond.h,
+								objectFit: 'contain',
+								filter: `drop-shadow(0 0 ${6 * u}px rgba(${P.fxHi}, ${0.9 * glow})) drop-shadow(0 0 ${22 * u}px rgba(${P.fxMid}, ${0.7 * glow}))`,
+							}}
+						/>
+					</div>
 					<Twinkles diamond={diamond} t={t} u={u} />
 					<Sparks diamond={diamond} logo={logo} t={t} u={u} wipeStart={T.dissolveStart} wipeDur={T.dissolveDur} />
 					{flareI > 0.001 ? <Flare x={flareX} y={flareY} i={flareI} u={u} width={width} /> : null}
