@@ -8,6 +8,8 @@ import {C} from './theme';
 const BM = {w: 834, h: 607};
 const GIRDLE = 0.31; // hoogte (fractie) van de horizontale lijn in de diamant waarlangs de flare loopt
 const SPARKS = 110;
+const GLOED_W = 1382;
+const GLOED_PAD = 320;
 const DUST = 20;
 const TAU = Math.PI * 2;
 const frac = (x: number) => x - Math.floor(x);
@@ -70,18 +72,19 @@ export const Loop: React.FC = () => {
 					/>
 				);
 			})}
-			{/* diamant met gouden gloed (gloed zit op een ruime wrapper, dus nergens een rechte rand) */}
+			{/* gouden gloed: vooraf geblurde versie van de diamant (assets/loop-gloed.png, 1382 px diamant + 320 px rand),
+			    veel sneller dan een drop-shadow per frame in 4K */}
 			<Img
-				src={staticFile('beeldmerk-goud.png')}
+				src={staticFile('loop-gloed.png')}
 				style={{
 					position: 'absolute',
-					left,
-					top,
-					width: w,
-					height: h,
-					filter: `drop-shadow(0 0 ${5 * u}px ${rgba(C.gold200, Math.min(1, 0.7 * glow))}) drop-shadow(0 0 ${20 * u}px ${rgba(C.gold300, Math.min(1, 0.55 * glow))}) drop-shadow(0 0 ${70 * u}px ${rgba(C.gold700, Math.min(1, 0.5 * glow))})`,
+					left: left - GLOED_PAD * (w / GLOED_W),
+					top: top - GLOED_PAD * (w / GLOED_W),
+					width: w + 2 * GLOED_PAD * (w / GLOED_W),
+					opacity: Math.min(1, glow / 1.6),
 				}}
 			/>
+			<Img src={staticFile('beeldmerk-goud.png')} style={{position: 'absolute', left, top, width: w, height: h}} />
 			{/* glans over de lijnen, gemaskeerd met de PNG zelf, volgt de flare */}
 			{flares.map((f, i) =>
 				f.k > 0 ? (
