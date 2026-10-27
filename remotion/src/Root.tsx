@@ -4,6 +4,7 @@ import {Intro} from './Intro';
 import {Outro} from './Outro';
 import {Cta} from './Cta';
 import {Overgang} from './Overgang';
+import {Loop} from './Loop';
 import {RES_H, RES_W, config, defaultAssetProps} from './theme';
 
 // fps komt van de bronvideo (build.sh geeft hem mee met --props); 25 is de terugvaloptie.
@@ -75,6 +76,8 @@ export const Root: React.FC = () => {
 					};
 				}}
 			/>
+			{/* Achtergrondloop voor het scherm op de awardavond: 4K liggend, 30 s, naadloos. */}
+			<Composition id="Loop" component={Loop} width={3840} height={2160} fps={30} durationInFrames={900} />
 		</>
 	);
 };
