@@ -11,6 +11,8 @@ const SPARKS = 110;
 const GLOED_W = 1382;
 const GLOED_PAD = 320;
 const DUST = 20;
+const TRAIL = 420; // vonkjes per flare-doorgang in het gouden spoor
+const LOOSE = 60; // losse, verder weg zwevende vonkjes rondom
 const TAU = Math.PI * 2;
 const frac = (x: number) => x - Math.floor(x);
 const rgba = (hex: string, a: number) =>
@@ -37,12 +39,13 @@ export const Loop: React.FC = () => {
 		{a: 0.12, b: 0.42, dir: 1},
 		{a: 0.6, b: 0.9, dir: -1},
 	];
-	const flares = passes.map(({a, b, dir}) => {
-		const q = Math.min(Math.max((p - a) / (b - a), 0), 1);
+	const flareAt = ({a, b, dir}: (typeof passes)[number], t: number) => {
+		const q = Math.min(Math.max((t - a) / (b - a), 0), 1);
 		const e = q * q * (3 - 2 * q);
 		const along = dir > 0 ? e : 1 - e;
-		return {x: left + w * (0.03 + 0.94 * along), y: top + h * GIRDLE, k: bump(p, a, b), q};
-	});
+		return {x: left + w * (0.03 + 0.94 * along), y: top + h * GIRDLE, k: bump(t, a, b), q};
+	};
+	const flares = passes.map((pass) => flareAt(pass, p));
 	const lit = Math.max(...flares.map((f) => f.k));
 	const glow = 0.8 + 0.3 * breathe + 0.5 * lit;
 	const mask = `url(${staticFile('beeldmerk-goud.png')}) center / contain no-repeat`;
@@ -151,6 +154,65 @@ export const Loop: React.FC = () => {
 					</React.Fragment>
 				) : null,
 			)}
+			{/* gouden vonkenspoor achter de flare aan: geboren op de flare, waaiert uit, zakt en dooft.
+			    Elk spoor is binnen de loop uitgedoofd (laatste flare eindigt op 0,9, levensduur max ~0,07). */}
+			{passes.map((pass, pi) =>
+				new Array(TRAIL).fill(0).map((_, i) => {
+					const born = pass.a + 0.03 + random(`tr-b-${pi}-${i}`) * (pass.b - pass.a - 0.06);
+					const life = 0.035 + random(`tr-l-${pi}-${i}`) * 0.055;
+					const age = (p - born) / life;
+					if (age < 0 || age > 1) return null;
+					const at = flareAt(pass, born);
+					const spread = (random(`tr-s-${pi}-${i}`) - 0.5) * 2;
+					const x = at.x + spread * 110 * u * age - pass.dir * random(`tr-v-${pi}-${i}`) * 160 * u * age;
+					const y = at.y + (random(`tr-y-${pi}-${i}`) - 0.4) * 140 * u * age + 220 * u * age * age;
+					const size = (4 + random(`tr-z-${pi}-${i}`) * 9) * u * (1 - 0.55 * age);
+					const twinkle = 0.7 + 0.3 * Math.sin(age * 20 + i);
+					const o = Math.min(1, age * 10) * (1 - age) ** 1.2 * twinkle * Math.min(1, at.k * 3);
+					const star = random(`tr-st-${pi}-${i}`) < 0.12;
+					return (
+						<React.Fragment key={`t${pi}-${i}`}>
+							<div
+								style={{position: 'absolute', left: x - size / 2, top: y - size / 2, width: size, height: size, borderRadius: '50%', background: C.gold200, opacity: o, boxShadow: `0 0 ${size * 3}px ${C.gold300}, 0 0 ${size * 6}px ${rgba(C.gold500, 0.6)}`}}
+							/>
+							{star
+								? [0, 90].map((deg) => (
+										<div
+											key={deg}
+											style={{
+												position: 'absolute',
+												left: x - 40 * u,
+												top: y - 1 * u,
+												width: 80 * u,
+												height: 2 * u,
+												transform: `rotate(${deg + 45 * age}deg)`,
+												background: `linear-gradient(to right, ${rgba(C.white, 0)} 0%, ${rgba(C.gold200, 0.9 * o)} 50%, ${rgba(C.white, 0)} 100%)`,
+											}}
+										/>
+									))
+								: null}
+						</React.Fragment>
+					);
+				}),
+			)}
+			{/* losse vonkjes, ruimer om de diamant heen: langzaam zwevend en twinkelend, naadloos per loop */}
+			{new Array(LOOSE).fill(0).map((_, i) => {
+				const lives = 1 + Math.floor(random(`lo-n-${i}`) * 3);
+				const age = frac(lives * p + random(`lo-o-${i}`));
+				const life = Math.floor(lives * p + random(`lo-o-${i}`)) % lives;
+				const a = random(`lo-a-${i}-${life}`) * TAU;
+				const r0 = 0.75 + random(`lo-r-${i}-${life}`) * 0.75;
+				const x = cx + Math.cos(a) * w * r0 + (random(`lo-dx-${i}-${life}`) - 0.5) * 80 * u * age;
+				const y = cy + Math.sin(a) * h * r0 * 1.1 - 70 * u * age;
+				const size = (3 + random(`lo-s-${i}`) * 6) * u;
+				const o = Math.sin(Math.PI * age) ** 2 * (0.45 + 0.55 * random(`lo-b-${i}`)) * (0.65 + 0.35 * Math.sin(TAU * (6 * lives * p + random(`lo-t-${i}`))));
+				return (
+					<div
+						key={`l${i}`}
+						style={{position: 'absolute', left: x - size / 2, top: y - size / 2, width: size, height: size, borderRadius: '50%', background: C.gold300, opacity: o, boxShadow: `0 0 ${size * 3}px ${C.gold500}`}}
+					/>
+				);
+			})}
 			{/* vonkjes rond de diamant: elk een geheel aantal levens per loop */}
 			{new Array(SPARKS).fill(0).map((_, i) => {
 				const lives = 2 + Math.floor(random(`ls-n-${i}`) * 3);
