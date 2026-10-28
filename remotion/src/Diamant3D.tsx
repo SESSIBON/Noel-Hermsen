@@ -1,13 +1,11 @@
-import React, {useEffect, useMemo} from 'react';
+import React, {useMemo} from 'react';
 import {AbsoluteFill, random, useCurrentFrame, useVideoConfig} from 'remotion';
 import {ThreeCanvas} from '@remotion/three';
-import {useThree} from '@react-three/fiber';
 import * as THREE from 'three';
-import {RoomEnvironment} from 'three/examples/jsm/environments/RoomEnvironment.js';
 import {C} from './theme';
 
 // Realistische versie van de draaiende diamant (naar Motion_TVL_V2): draadmodel van glanzend
-// metaalgoud in 3D, belicht met een omgevingskaart, met gloed en vonkjes op het nachtverloop.
+// metaalgoud in 3D, belicht met warme lampen (geen omgevingskaart: die maakt het goud bleek), met gloed en vonkjes op het nachtverloop.
 // Per loop draait hij 90 graden (8-voudige symmetrie), dus de loop sluit naadloos.
 const N = 8;
 const TAU = Math.PI * 2;
@@ -35,17 +33,6 @@ for (let i = 0; i < N; i++) {
 }
 const VERTS = [...TABLE, ...GIRDLE_T, ...GIRDLE_B, CULET];
 const R = 0.02; // dikte van de staafjes
-
-const Omgeving: React.FC = () => {
-	const {gl, scene} = useThree();
-	useEffect(() => {
-		const pmrem = new THREE.PMREMGenerator(gl);
-		const env = pmrem.fromScene(new RoomEnvironment(), 0.03).texture;
-		scene.environment = env;
-		return () => env.dispose();
-	}, [gl, scene]);
-	return null;
-};
 
 const Draadmodel: React.FC<{rot: number}> = ({rot}) => {
 	const mat = useMemo(
@@ -104,7 +91,6 @@ export const Diamant3D: React.FC = () => {
 			    maakt renderen zo'n 5x trager. */}
 			<AbsoluteFill>
 				<ThreeCanvas width={width} height={height} gl={{alpha: true, antialias: true}} camera={{fov: 22, position: [0, 0.12, 7.2]}}>
-					<Omgeving />
 					<ambientLight intensity={0.6} color="#ffe6b8" />
 					<directionalLight position={[3, 4, 5]} intensity={2.2} color="#fff1d0" />
 					<directionalLight position={[-4, 1, 2]} intensity={1.2} color="#ffd9a0" />
