@@ -5,6 +5,7 @@ import {Outro} from './Outro';
 import {Cta} from './Cta';
 import {Overgang} from './Overgang';
 import {Loop} from './Loop';
+import {Draailoop} from './Draailoop';
 import {RES_H, RES_W, config, defaultAssetProps} from './theme';
 
 // fps komt van de bronvideo (build.sh geeft hem mee met --props); 25 is de terugvaloptie.
@@ -78,6 +79,8 @@ export const Root: React.FC = () => {
 			/>
 			{/* Achtergrondloop voor het scherm op de awardavond: 4K liggend, 30 s, naadloos. */}
 			<Composition id="Loop" component={Loop} width={3840} height={2160} fps={30} durationInFrames={900} />
+			{/* Draaiende draadmodel-diamant (naar Motion_TVL_V2): 1080p, 60 fps voor een soepele draai, 30 s naadloos. */}
+			<Composition id="Draailoop" component={Draailoop} width={1920} height={1080} fps={60} durationInFrames={1800} />
 		</>
 	);
 };
