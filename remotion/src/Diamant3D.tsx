@@ -95,18 +95,14 @@ export const Diamant3D: React.FC = () => {
 	const cx = width / 2;
 	const cy = height * 0.45;
 	const S = 360 * u;
-	const pulse = 0.85 + 0.15 * Math.sin(TAU * 2 * p);
 
 	return (
 		<AbsoluteFill style={{background: `linear-gradient(to bottom right, ${C.navy950} 0%, ${C.navy900} 50%, ${C.navy700} 100%)`}}>
 			<AbsoluteFill style={{background: `radial-gradient(ellipse 38% 55% at 50% 42%, ${rgba(C.navy700, 0.75)} 0%, ${rgba(C.navy900, 0)} 100%)`}} />
 			<AbsoluteFill style={{background: `radial-gradient(ellipse 80% 80% at 50% 45%, ${rgba(C.navy950, 0)} 55%, ${rgba(C.navy950, 0.65)} 100%)`}} />
-			{/* gloed: de canvas zelf krijgt een gouden drop-shadow, die volgt dus precies de staafjes */}
-			<AbsoluteFill
-				style={{
-					filter: `drop-shadow(0 0 ${3 * u}px ${rgba(C.gold200, 0.95)}) drop-shadow(0 0 ${12 * u}px ${rgba(C.gold300, 0.85 * pulse)}) drop-shadow(0 0 ${40 * u}px ${rgba(C.gold500, 0.75 * pulse)})`,
-				}}
-			>
+			{/* De gouden gloed (bloom) komt er achteraf in ffmpeg overheen: een CSS-filter op de WebGL-canvas
+			    maakt renderen zo'n 5x trager. */}
+			<AbsoluteFill>
 				<ThreeCanvas width={width} height={height} gl={{alpha: true, antialias: true}} camera={{fov: 22, position: [0, 0.12, 7.2]}}>
 					<Omgeving />
 					<ambientLight intensity={0.6} color="#ffe6b8" />
