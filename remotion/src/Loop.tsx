@@ -10,7 +10,8 @@ const GIRDLE = 0.31; // hoogte (fractie) van de horizontale lijn in de diamant w
 const SPARKS = 110;
 const GLOED_W = 1382;
 const GLOED_PAD = 320;
-const DUST = 20;
+const DUST = 75;
+const BOKEH = 14; // grote, zachte lichtvlekjes op de achtergrond voor diepte
 const TRAIL = 420; // vonkjes per flare-doorgang in het gouden spoor
 const LOOSE = 60; // losse, verder weg zwevende vonkjes rondom
 const TAU = Math.PI * 2;
@@ -61,13 +62,27 @@ export const Loop: React.FC = () => {
 			<AbsoluteFill
 				style={{background: `radial-gradient(ellipse 85% 80% at 50% 48%, ${rgba(C.navy950, 0)} 50%, ${rgba(C.navy950, 0.6)} 100%)`}}
 			/>
+			{/* bokeh: grote zachte gouden vlekjes die langzaam omhoog drijven, een geheel aantal rondes per loop */}
+			{new Array(BOKEH).fill(0).map((_, i) => {
+				const laps = 1 + Math.floor(random(`bk-n-${i}`) * 2);
+				const size = (30 + random(`bk-r-${i}`) * 60) * u;
+				const y = (frac(random(`bk-y-${i}`) - laps * p) * 1.3 - 0.15) * height;
+				const x = random(`bk-x-${i}`) * width + Math.sin(TAU * (p + random(`bk-ph-${i}`))) * 50 * u;
+				const o = 0.05 + random(`bk-o-${i}`) * 0.08;
+				return (
+					<div
+						key={`b${i}`}
+						style={{position: 'absolute', left: x - size / 2, top: y - size / 2, width: size, height: size, borderRadius: '50%', background: `radial-gradient(circle, ${rgba(C.gold300, o * 2)} 0%, ${rgba(C.gold500, o)} 45%, ${rgba(C.gold500, 0)} 72%)`}}
+					/>
+				);
+			})}
 			{/* goudstof op de achtergrond: zweeft omhoog, een geheel aantal rondes per loop */}
 			{new Array(DUST).fill(0).map((_, i) => {
-				const laps = 1 + Math.floor(random(`ld-n-${i}`) * 2);
+				const laps = 2 + Math.floor(random(`ld-n-${i}`) * 3);
 				const y = (frac(random(`ld-y-${i}`) - laps * p) * 1.1 - 0.05) * height;
 				const x = random(`ld-x-${i}`) * width + Math.sin(TAU * (p + random(`ld-ph-${i}`))) * 30 * u;
-				const size = (2 + random(`ld-r-${i}`) * 3) * u;
-				const o = (0.06 + random(`ld-o-${i}`) * 0.14) * (0.75 + 0.25 * Math.sin(TAU * (3 * p + random(`ld-t-${i}`))));
+				const size = (2 + random(`ld-r-${i}`) * 4.5) * u;
+				const o = (0.1 + random(`ld-o-${i}`) * 0.25) * (0.75 + 0.25 * Math.sin(TAU * (3 * p + random(`ld-t-${i}`))));
 				return (
 					<div
 						key={`d${i}`}
