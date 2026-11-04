@@ -21,7 +21,8 @@ const rgba = (hex: string, a: number) =>
 // Zachte puls 0..1 binnen [a, b] van de loopfase (0 buiten dat venster).
 const bump = (p: number, a: number, b: number) => (p <= a || p >= b ? 0 : Math.sin(Math.PI * ((p - a) / (b - a))) ** 2);
 
-export const Loop: React.FC = () => {
+// zwart: zelfde loop op een zwarte achtergrond (met een heel zacht warm licht achter de diamant).
+export const Loop: React.FC<{zwart?: boolean}> = ({zwart = false}) => {
 	const frame = useCurrentFrame();
 	const {width, height, durationInFrames} = useVideoConfig();
 	const u = Math.min(width, height) / 1080;
@@ -52,15 +53,15 @@ export const Loop: React.FC = () => {
 	const mask = `url(${staticFile('beeldmerk-goud.png')}) center / contain no-repeat`;
 
 	return (
-		<AbsoluteFill style={{background: `linear-gradient(to bottom right, ${C.navy950} 0%, ${C.navy900} 50%, ${C.navy700} 100%)`}}>
+		<AbsoluteFill style={{background: zwart ? '#000000' : `linear-gradient(to bottom right, ${C.navy950} 0%, ${C.navy900} 50%, ${C.navy700} 100%)`}}>
 			{/* zachte lichtwolk achter de diamant, ademt mee */}
 			<AbsoluteFill
 				style={{
-					background: `radial-gradient(ellipse 42% 48% at 50% 45%, ${rgba(C.navy700, 0.55 + 0.25 * breathe)} 0%, ${rgba(C.navy900, 0)} 100%)`,
+					background: `radial-gradient(ellipse 42% 48% at 50% 45%, ${zwart ? rgba(C.gold700, 0.1 + 0.05 * breathe) : rgba(C.navy700, 0.55 + 0.25 * breathe)} 0%, ${zwart ? 'rgba(0, 0, 0, 0)' : rgba(C.navy900, 0)} 100%)`,
 				}}
 			/>
 			<AbsoluteFill
-				style={{background: `radial-gradient(ellipse 85% 80% at 50% 48%, ${rgba(C.navy950, 0)} 50%, ${rgba(C.navy950, 0.6)} 100%)`}}
+				style={{background: `radial-gradient(ellipse 85% 80% at 50% 48%, ${zwart ? 'rgba(0, 0, 0, 0)' : rgba(C.navy950, 0)} 50%, ${zwart ? 'rgba(0, 0, 0, 0.6)' : rgba(C.navy950, 0.6)} 100%)`}}
 			/>
 			{/* bokeh: grote zachte gouden vlekjes die langzaam omhoog drijven, een geheel aantal rondes per loop */}
 			{new Array(BOKEH).fill(0).map((_, i) => {

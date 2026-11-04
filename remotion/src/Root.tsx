@@ -80,6 +80,7 @@ export const Root: React.FC = () => {
 			/>
 			{/* Achtergrondloop voor het scherm op de awardavond: 4K liggend, 30 s, naadloos. */}
 			<Composition id="Loop" component={Loop} width={3840} height={2160} fps={30} durationInFrames={900} />
+			<Composition id="LoopZwart" component={Loop} width={3840} height={2160} fps={30} durationInFrames={900} defaultProps={{zwart: true}} />
 			{/* Draaiende draadmodel-diamant (naar Motion_TVL_V2): 1080p, 60 fps voor een soepele draai, 30 s naadloos. */}
 			<Composition id="Draailoop" component={Draailoop} width={1920} height={1080} fps={60} durationInFrames={1800} />
 			{/* Realistische 3D-versie van de draaiende diamant: 1080p, 60 fps, 30 s naadloos. */}
