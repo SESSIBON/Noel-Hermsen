@@ -31,8 +31,9 @@ export const MaLoop: React.FC<{categorie: MaCategorie}> = ({categorie}) => {
 	const breathe = 1 + 0.015 * Math.sin(TAU * p);
 	const sx = -360 * u;
 	const sy = -330 * u;
-	// Ster: 5-voudig symmetrisch, dus 72 graden per loop sluit naadloos aan.
-	const sterRot = 72 * p;
+	// Ster: wiegt rustig heen en weer om zijn eigen middelpunt (de ster is niet exact symmetrisch,
+	// dus een hele draai zou bij de naad verspringen).
+	const sterRot = 10 * Math.sin(TAU * p);
 	const sterW = 0.62 * sw;
 
 	// Schuine band (-4 graden, zoals op de categorie-introslides): schuift van rechts naar links door
@@ -83,6 +84,7 @@ export const MaLoop: React.FC<{categorie: MaCategorie}> = ({categorie}) => {
 						width: sterW,
 						height: sterW,
 						transform: `rotate(${sterRot}deg)`,
+						transformOrigin: '50.6% 51.7%', // middelpunt van de ster in ster-*.svg
 					}}
 				/>
 			</div>
