@@ -7,6 +7,7 @@ import {Overgang} from './Overgang';
 import {Loop} from './Loop';
 import {Draailoop} from './Draailoop';
 import {Diamant3D} from './Diamant3D';
+import {MaLoop} from './MaLoop';
 import {RES_H, RES_W, config, defaultAssetProps} from './theme';
 
 // fps komt van de bronvideo (build.sh geeft hem mee met --props); 25 is de terugvaloptie.
@@ -85,6 +86,10 @@ export const Root: React.FC = () => {
 			<Composition id="Draailoop" component={Draailoop} width={1920} height={1080} fps={60} durationInFrames={1800} />
 			{/* Realistische 3D-versie van de draaiende diamant: 1080p, 60 fps, 30 s naadloos. */}
 			<Composition id="Diamant3D" component={Diamant3D} width={1920} height={1080} fps={60} durationInFrames={1800} />
+			{/* Maastricht Awards: achtergrondloops per categorie, 1080p, 30 s naadloos. */}
+			{(['takeoff', 'hospitality', 'made', 'algemeen'] as const).map((c) => (
+				<Composition key={c} id={`MaLoop-${c}`} component={MaLoop} width={1920} height={1080} fps={30} durationInFrames={900} defaultProps={{categorie: c}} />
+			))}
 		</>
 	);
 };
