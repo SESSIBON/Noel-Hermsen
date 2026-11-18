@@ -2,18 +2,19 @@ import React from 'react';
 import {AbsoluteFill, Img, staticFile, useCurrentFrame, useVideoConfig} from 'remotion';
 
 // Maastricht Awards: achtergrondloop voor de finalepresentatie, één per categorie.
-// Centraal het schild in de lichte categorietint, dat rustig zweeft, met in het midden de rode ster
+// Centraal het schild in de donkere categoriekleur op de lichte tint, dat rustig zweeft, met in het midden de rode ster
 // die continu ronddraait. Af en toe licht een punt van de ster op en twee keer per loop schuift er
 // een lichtstreek over het schild.
 // Huisstijl: vlak, geen verlopen of schaduwen. Alles is periodiek: naadloze loop.
 export type MaCategorie = 'takeoff' | 'hospitality' | 'made' | 'algemeen';
 
-const KLEUREN: Record<MaCategorie, {grond: string; tint: string; ster: string}> = {
-	takeoff: {grond: '#3022ef', tint: '#a1c6f2', ster: 'ster-lichtrood.svg'},
-	hospitality: {grond: '#7224b0', tint: '#dc9efd', ster: 'ster-lichtrood.svg'},
-	made: {grond: '#6b966f', tint: '#d3ff9b', ster: 'ster-lichtrood.svg'},
+const KLEUREN: Record<MaCategorie, {grond: string; tint: string; ster: string; logo: string}> = {
+	// Lichte categorietint als achtergrond, schild in de donkere tint, zwart logo (wit leest niet op de tint).
+	takeoff: {grond: '#a1c6f2', tint: '#3022ef', ster: 'ster-lichtrood.svg', logo: 'logo-lichtrood-zwart.svg'},
+	hospitality: {grond: '#dc9efd', tint: '#7224b0', ster: 'ster-lichtrood.svg', logo: 'logo-lichtrood-zwart.svg'},
+	made: {grond: '#d3ff9b', tint: '#6b966f', ster: 'ster-lichtrood.svg', logo: 'logo-lichtrood-zwart.svg'},
 	// Campagne-opbouw: rood schild op zwart met een witte ster.
-	algemeen: {grond: '#000000', tint: '#e4163b', ster: 'ster-wit.svg'},
+	algemeen: {grond: '#000000', tint: '#e4163b', ster: 'ster-wit.svg', logo: 'logo-wit-lichtrood.svg'},
 };
 
 const TAU = Math.PI * 2;
@@ -123,7 +124,7 @@ export const MaLoop: React.FC<{categorie: MaCategorie}> = ({categorie}) => {
 				) : null}
 			</div>
 			<Img
-				src={staticFile('ma/logo-wit-lichtrood.svg')}
+				src={staticFile(`ma/${k.logo}`)}
 				style={{position: 'absolute', left: cx - 280 * u, top: height * 0.44 + sw / 2 + 70 * u, width: 560 * u}}
 			/>
 		</AbsoluteFill>
